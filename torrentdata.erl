@@ -4,104 +4,84 @@
 %%% @doc torrentdata.erl
 %%%
 %%% @end
-%%% Created : 10 Nov 2011 by Johan Wikström Schützer
+%%% Created  : 10 Nov 2011 by Johan Wikström Schützer
+%%% Modified : 18 Nov 2011 by Johan Wikström Schützer
+%%%            Notes: From simple server to gen_server 
+%%%
+%%%            SEE defs.hrl FOR INFO ON EXPECTED MESSAGES
+%%% 
 %%%-------------------------------------------------------------------
 
 -module(torrentdata).
--export([start/0, create_record/5, stop/0, insert/2, update/2, lookup/2, delete/2]).
+-export([start_link/0, start_link/1, stop/0]).
+-export([init/1, terminate/2, handle_call/3, handle_cast/2]).
+-export([create_record/5, insert/1, update/1, 
+         lookup/1, delete/1]).
+-behaviour(gen_server).
 
-%%--------------------------------------------------------------------
-%% @author Johan Wikström Schützer
-%% @doc torrentdata.erl
-%% @spec Definition of the record 'torrent'.
-%%       The 'Id' will be used as a key when calling the lookup/2
-%%       function. Should be a unique atom. 'Size' is the size of 
-%%       the content file(s) of the torrent in bytes (integer) 
-%%       (the gui should recalculate it to KB or MB. 
-%%       'Percent' is the percentage of the finished download 
-%%       (integer 0-100). 'Pieces' is the amount of pieces in the 
-%%       torrent and 'Pieces_finished' are the amount of finished 
-%%       pieces (both integers).
-%% @end
-%%--------------------------------------------------------------------	
--record(torrent,
-       {id,
-	size,
-	percent,
-	pieces,
-	pieces_finished}).
+-include("defs.hrl").
 
-%%--------------------------------------------------------------------
-%% @author Johan Wikström Schützer
-%% @doc torrentdata.erl
-%% @spec Starts this server, should only be used once (at startup) 
-%%       or, if it is connected to a supervising process, it should 
-%%       be restarted in case of crash).
-%% @end
-%%--------------------------------------------------------------------	
-start() ->
-    case server_active() of
-	true  -> {error, already_started};
-	false -> register(torrentdata_process, 
-			  spawn(fun() -> loop() end))
-    end.
+%% Behaviour
 
-%%--------------------------------------------------------------------
-%% @author Johan Wikström Schützer
-%% @doc torrentdata.erl
-%% @spec Stops this server. Should only be used once, at normal
-%%       termination of the application.
-%% @end
-%%--------------------------------------------------------------------
+start_link() ->
+    start_link().
+
+start_link(_Args) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, _Args, []).
+
 stop() ->
-    case server_active() of
-	true  -> 
-	    torrentdata_process ! {close, true};
-	false -> {error, already_stopped}
-    end.    
+    gen_server:cast(?MODULE, close).
 
-%%--------------------------------------------------------------------
-%% @author Johan Wikström Schützer
-%% @doc torrentdata.erl
-%% @spec Inserts a torrent record into the table. Takes a torrent
-%%       record and caller pid as arguments (use create_record/5 to 
-%%       create a record correctly).
-%% @end
-%%--------------------------------------------------------------------
-insert(Record, From) ->
-    do_operation(Record, From, insert).
+init(_Args) ->
+    {ok, null}.
 
-%%--------------------------------------------------------------------
-%% @author Johan Wikström Schützer
-%% @doc torrentdata.erl
-%% @spec Updates an existin torrent record into the table. 
-%%       Takes a torrent record and caller pid as arguments 
-%%       (use create_record/5 to create a record correctly).
-%% @end
-%%--------------------------------------------------------------------
-update(Record, From) ->
-    do_operation(Record, From, update).
+terminate(_Reason, _LoopData) ->
+    gen_server:cast(?MODULE, {stop, []}).
 
-%%--------------------------------------------------------------------
-%% @author Johan Wikström Schützer
-%% @doc torrentdata.erl
-%% @spec Returns a torrent record. Takes the Key and the caller Pid
-%%       as arguments. Make sure that the Key is correct (see the
-%%       function create_record/5 for more information). 
-%% @end
-%%--------------------------------------------------------------------
-lookup(Key, From) ->
-    do_operation(Key, From, lookup).
+handle_cast({Operation, Value}, _LoopData) ->
+    do_operation(Operation, Value),
+    {noreply, _LoopData}.
 
-%%--------------------------------------------------------------------
-%% @author Johan Wikström Schützer
-%% @doc torrentdata.erl
-%% @spec Deletes a torrent record. Takes Key and caller Pid as
-%%       arguments.
-%% @end
-%%--------------------------------------------------------------------
-delete(Key, From) ->
-    do_operation(Key, From, delete).
+handle_cast({stop, _Value}, _LoopData) ->
+    {stop, normal, _LoopData};
+
+handle_cast(init, _LoopData) ->
+    dets:open_file(?DATAFILE, [{type, set}]),
+    {noreply, _LoopData};
+
+handle_cast(close, _LoopData) ->
+    dets:sync(?DATAFILE),
+    dets:close(?DATAFILE),
+    {noreply, _LoopData};
+
+handle_cast({insert, Record}, _LoopData) ->
+    dets:
+    Bool = dets:insert_new(?DATAFILE, {Record#torrent.id, Record}),
+    case Bool of
+	true  -> Reply = {ok, inserted};
+	false -> Reply = {error, no_unique_key}
+    end,
+    {noreply, _Loopdata};
+
+handle_cast({update, Record}, _LoopData) ->
+    case dets:lookup(?DATAFILE, Record#torrent.id) of
+	[] -> Reply = {error, no_existing_record};
+        _  -> Reply = dets:insert(?DATAFILE, 
+				  {Record#torrent.id, Record})
+    end,
+    {noreply, _LoopData};
+
+handle_cast({delete, Key}, _LoopData) ->
+    Reply = dets:delete(?DATAFILE, Key),
+    {noreply, _LoopData};
+
+handle_cast({lookup, Key}, _LoopData) ->
+    case dets:lookup(?DATAFILE, Key) of
+	[] -> Reply = {error, no_existing_record};
+	[Record] -> Reply = Record
+    end,
+    gen_server:cast(logger, {torrent_record, Reply}),
+    {noreply, _LoopData}.
 
 %%--------------------------------------------------------------------
 %% @author Johan Wikström Schützer
@@ -112,82 +92,14 @@ delete(Key, From) ->
 %%       external use.
 %% @end
 %%--------------------------------------------------------------------
-do_operation(Item, From, Operation) ->
+do_operation(Item, Operation) ->
     case server_active() of
 	true ->
-	    torrentdata_process ! {init},
-	    torrentdata_process ! {Operation, Item, From},
-	    torrentdata_process ! {close, false},
-	    receive_reply();
-	false -> {error, server_not_active}
-    end.
-
-%%--------------------------------------------------------------------
-%% @author Johan Wikström Schützer
-%% @doc torrentdata.erl
-%% @spec The server loop. Handles all the messages passed from the
-%%       other functions in this module. This loop is started by the
-%%       start/0 function, so this is not to be used directly.
-%% @end
-%%--------------------------------------------------------------------
-loop() ->
-    receive
-	{init} ->
-	    dets:open_file(torrentdata, [{type, set}]),
-	    loop();
-	{insert, Record, From} ->
-	    Bool = dets:insert_new(torrentdata, {Record#torrent.id, Record}),
-	    case Bool of
-		true  -> reply(From, {ok, inserted});
-		false -> reply(From, {error, no_unique_key})
-            end,
-	    loop();
-	{update, Record, From} ->
-            case dets:lookup(torrentdata, Record#torrent.id) of
-		[] -> Reply = {error, no_existing_record};
-                _  -> Reply = dets:insert(torrentdata, 
-					 {Record#torrent.id, Record})
-            end,
-	    reply(From, Reply),
-	    loop();
-	{lookup, Key, From} ->
-            [Record] = dets:lookup(torrentdata, Key),
-	    reply(From, Record),
-	    loop();
-        {delete, Key, From} ->
-	    Reply = dets:delete(torrentdata, Key),
-	    reply(From, Reply),
-	    loop();
-        {close, Shall_stop} ->
-	    dets:sync(torrentdata),
-	    dets:close(torrentdata),
-	    case Shall_stop of
-		true  -> {ok, stopped};
-                false -> loop()
-            end
-    end.
-
-%%--------------------------------------------------------------------
-%% @author Johan Wikström Schützer
-%% @doc torrentdata.erl
-%% @spec A simple reply function. Used in the loop to given the caller
-%%       confirmation messages.
-%% @end
-%%--------------------------------------------------------------------
-reply(Pid, Reply) ->
-    Pid ! {reply, Reply}.
-
-%%--------------------------------------------------------------------
-%% @author Johan Wikström Schützer
-%% @doc torrentdata.erl
-%% @spec A simple receive reply function. Used in every caller
-%%       caller
-%% @end
-%%--------------------------------------------------------------------
-receive_reply() ->
-    receive
-	{reply, Reply} ->
-	    Reply
+	    gen_server:cast(?MODULE, init),
+	    Reply = gen_server:call(?MODULE, {Operation, Item}),
+	    gen_server:cast(?MODULE, close),
+	    Reply;
+	false -> blackboard ! {error, torrentdata_not_active}
     end.
 
 %%--------------------------------------------------------------------
@@ -211,7 +123,7 @@ create_record(Id, Size, Percent, Pieces, Pieces_finished) ->
 %% @end
 %%--------------------------------------------------------------------
 server_active() ->
-    case whereis(torrentdata_process) of
+    case whereis(?MODULE) of
 	undefined -> false;
 	_         -> true
     end.
