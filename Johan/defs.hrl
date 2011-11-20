@@ -37,11 +37,14 @@
 -record(torrent,
        {id,
 	size,
+	downloaded,
 	percent,
 	pieces,
-	pieces_finished}).
+	pieces_finished,
+        trackers,
+        max_peers}).
 
--record(trackerinfo,
+-record(tracker_info,
 	{url,
 	 info_hash,
 	 peer_id,
@@ -50,7 +53,8 @@
 	 downloaded,
 	 left,
 	 event,
-	 num_want}).
+	 num_want,
+	 interval}).
 
 %%--------------------------------------------------------------------
 %% @author Johan Wikström Schützer

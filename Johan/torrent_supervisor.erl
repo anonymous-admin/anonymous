@@ -8,13 +8,13 @@ start_link() ->
 
 start_in_shell() ->
     {ok, Pid} = supervisor:start_link({local, ?MODULE}, ?MODULE, []),
-    Pid.
-%    unlink(Pid).
+    unlink(Pid),
+    {ok, Pid}.
 
 init(_Args) ->
     TorrentdataChild = {torrentdata, {torrentdata, start_link, []},
-	     temporary, 2000, worker, [torrentdata]},
-    {ok,{{one_for_one,1,1}, [TorrentdataChild]}}.
+	     transient, 2000, worker, [torrentdata]},
+    {ok,{{one_for_one,3,1}, [TorrentdataChild]}}.
     %%Put more children here
 
 start_child(Child, Args) ->
@@ -22,7 +22,7 @@ start_child(Child, Args) ->
     case Child of 
 	tracker ->
 	    TrackerChild = {Id, {tracker_interactor, start_link, Args},
-			    temporary, 2000, worker, [tracker_interactor]},
+			    transient, 2000, worker, [tracker_interactor]},
 	    supervisor:start_child(torrent_supervisor, TrackerChild);
 	_ -> ok
     end.
