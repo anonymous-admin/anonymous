@@ -1,7 +1,8 @@
 %%Author: Massih
 %%Creation Date: 2-Nov-2011
 -module(tracker_interactor).
--export([init/1,start_link/1,handle_call/3]).
+-export([init/1,start_link/1,handle_call/3,terminate/2]).
+-export([create_record/0]).
 -behaviour(gen_server).
 -include("defs.hrl").
 
@@ -13,6 +14,7 @@ terminate(_Reason,Data)->
     ok.
 
 start_link(Data)->
+    io:format("yes~n"),
     gen_server:start_link(?MODULE,Data,[]).
 
 
@@ -34,6 +36,7 @@ response_handler(Result)->
 
 handle_call({tracker_request_info,Info},_From,Data)->
     URL = make_url(Data,Info),
+    io:format("The url is ~p~n", [URL]),
     Reply = case send_request(URL) of
 	{ok,Result} ->
 	    response_handler(Result);		 
@@ -44,5 +47,12 @@ handle_call({tracker_request_info,Info},_From,Data)->
 	    %%gen_server:cast(logger,{tracker_request_error,Reason})
     end,
     {reply,Reply,Data}.
+
+create_record() ->
+    T = #tracker_info{url = "http://torrent.fedoraproject.org:6969/announce",
+		      info_hash = "%16%71%26%41%9E%F1%84%B4%EC%8F%B3%CA%46%5A%B7%FE%D1%97%51%9A",
+		      peer_id = "edocIT00855481937666",
+		      port = "6881"},
+    T.
     
 
