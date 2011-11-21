@@ -19,9 +19,9 @@ start_link(Trackers) ->
 handle_cast(_Operation, {Dict, Entries}) ->
     ok.
 
-handle_call({_Operation, _Item}, _From, {Dict, Entries}) ->
-    Reply = ok,
-    {reply, Reply, {Dict, Entries}}.
+handle_call(Operation, _From, {Dict, Entries}) ->
+    notify_trackers(Dict, Operation, Entries),
+    {reply, ok, {Dict, Entries}}.
 
 spawn_trackers([], Dict, Entries) ->
     {Dict, Entries};
@@ -30,19 +30,36 @@ spawn_trackers([H|T], Dict, Entries) ->
     Result = gen_server:call(Pid, info_to_send(H,"started")),
     [_Seeders,_Leechers,Interval,_Peers] = Result,
     gen_server:cast(logger, Result),
-    spawn_link(fun() -> interval_loop(H, Pid) end),
-    NewDict = dict:store(Entries, Pid, Dict),
+    LoopId = spawn_link(fun() -> interval_loop(H, Pid, "") end),
+    NewDict = dict:store(Entries, {Pid, H, LoopId}, Dict),
     spawn_trackers(T, NewDict, Entries+1).
 
-interval_loop(Tracker, Pid) ->
+interval_loop(Tracker, Pid, Event) ->
     receive
+	{event, pause} -> 
+	    NewTracker = gen_server:call(logger, {get_tracker, Tracker#tracker_info.url}),
+	    gen_server:call(Pid, info_to_send(NewTracker,"pause")),
+            interval_loop(Tracker, Pid, "pause");
+	{event, completed} -> 
+	    NewTracker = gen_server:call(logger, {get_tracker, Tracker#tracker_info.url}),
+	    gen_server:call(Pid, info_to_send(NewTracker,"completed")),
+            interval_loop(Tracker, Pid, "completed")
     after Tracker#tracker_info.interval ->
-	    gen_server:call(Pid, info_to_send(Tracker,""))
+	    NewTracker = gen_server:call(logger, {get_tracker, Tracker#tracker_info.url}),
+	    gen_server:call(Pid, info_to_send(NewTracker,Event))
     end,
-    interval_loop(Tracker, Pid).
+    interval_loop(NewTracker, Pid, Event).
 
 info_to_send(Tracker, Event) ->
     {tracker_request_info, 
      {Tracker#torrent.downloaded, 
      (Tracker#torrent.size-Tracker#torrent.downloaded),
      Event, Tracker#torrent.max_peers}}.
+
+notify_trackers(Dict, Event, 0) -> ok;
+notify_trackers(Dict, Event, Entries) ->
+    {_, _, LoopId} = dict:find(Dict, Entries), 
+    LoopId ! {event, Event},
+    notify_trackers(Dict, Event, Entries-1).
+		 
+    
