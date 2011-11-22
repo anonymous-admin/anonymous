@@ -59,10 +59,6 @@ get_bitfield({info, Info}) ->
     NumberOfPieces = get_number_of_pieces({info, Info}),
     create_bitfield_binary(NumberOfPieces).
 
-%
-% Internal
-%
-
 encoder(Data)->
     crypto:start(),
     Info_hash = [ hd(integer_to_list(N, 16)) || << N:4 >> <= crypto:sha(Data) ],
@@ -87,12 +83,6 @@ get_info_dec(Name, Info) ->
 create_bitfield_binary(0) ->
     <<>>;
 create_bitfield_binary(NumberOfPieces) ->
-  % Here be dragons. By doing NumberOfPieces rem 8 we get the number of bits
-  % that won't be fitting nicely into a byte. So they need to be padded out
-  % with leading 0s. To find out how many padding zeros we need we subtract
-  % that number from 8. But if we had no overflow originally subtracting it
-  % from 8 will give us 8. The final rem 8 turns that potential 8 into a 0
-  % while leaving any other values untouched.
   LeaderLength = (8 - NumberOfPieces rem 8) rem 8,
   create_bitfield_binary(<<>>, LeaderLength, NumberOfPieces).
 
