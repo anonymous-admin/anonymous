@@ -34,12 +34,19 @@
 %%       pieces (both integers).
 %% @end
 %%--------------------------------------------------------------------	
--record(torrent,
-       {id,
-	size,
-	percent,
-	pieces,
-	pieces_finished}).
+-record(torrent, {
+	  id, 
+	  info_hash_tracker, 
+	  announce, 
+	  creation_date, 
+	  comment, 
+	  created_by, 
+	  encoding, files,
+	  filename, 
+	  piece_length, 
+	  number_of_pieces, 
+	  bitfield
+	 }).
 
 -record(trackerinfo,
 	{url,
