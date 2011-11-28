@@ -23,6 +23,7 @@ public class GUI extends JFrame {
     protected JButton button3;
     protected JButton button4;
     protected JButton button5;
+    protected JButton stopButton;
     protected JButton button6;
     protected JMenuBar menuBar;
     protected JMenu fileMenu;
@@ -48,10 +49,15 @@ public class GUI extends JFrame {
     protected static JTextArea leechersField;
     protected static JTextArea downloadedField;
     protected static JTextArea uploadedField;
+    protected static JTextArea defaultDirField;
     final JFileChooser fc = new JFileChooser();
     final JFileChooser fc2 = new JFileChooser();
     protected JProgressBar progressBar;
     protected TalkToErlang tte;
+    final JOptionPane optionPane = new JOptionPane(
+    	    "Do you really want to delete this torrent? all data will be lost",
+    	    JOptionPane.QUESTION_MESSAGE,
+    	    JOptionPane.YES_NO_OPTION);
 
 	
     public enum MenuState {
@@ -120,21 +126,32 @@ public class GUI extends JFrame {
 
         switch (currentMenu) {
         case MAIN: // set all visual objects unique for main menu to null (this will work since this method will be called before the currentMenu is changed)
-            menuborder.setVisible(false);
-            menuborder = null;
+//            menuborder.setVisible(false);
+//            menuborder = null;
+            fileNameField.setText("File name:");
+            fileSizeField.setText("File size:");
+            trackerField.setText("Tracker:");
+            statusField.setText("Status:");
+            timeLeftField.setText("Time left:");
+            downloadSpeedField.setText("Download speed:");
+            uploadSpeedField.setText("Upload speed:");
+            seedersField.setText("Seeders:");
+            leechersField.setText("Leechers:");
+            downloadedField.setText("Downloaded:");
+            uploadedField.setText("Uploaded:");
             java.lang.Runtime.getRuntime().gc(); //this comes last just before break
-            break;
-        case OPTION:
-            menuborder.setVisible(false);
-            menuborder = null;
-            java.lang.Runtime.getRuntime().gc(); //this comes last just before break
-            break;
-
-        case ABOUT:
-            menuborder.setVisible(false);
-            menuborder = null;
-            java.lang.Runtime.getRuntime().gc(); //this comes last just before break
-            break;
+//            break;
+//        case OPTION:
+//            menuborder.setVisible(false);
+//            menuborder = null;
+//            java.lang.Runtime.getRuntime().gc(); //this comes last just before break
+//            break;
+//
+//        case ABOUT:
+//            menuborder.setVisible(false);
+//            menuborder = null;
+//            java.lang.Runtime.getRuntime().gc(); //this comes last just before break
+//            break;
         }
 
     }
@@ -150,6 +167,7 @@ public class GUI extends JFrame {
         setResizable(false);
 
         conn = super.getContentPane();
+        currentMenu = MenuState.MAIN;
         
         //layeredpane
         pane = new JLayeredPane();
@@ -164,7 +182,7 @@ public class GUI extends JFrame {
         menuborder.setBounds(0, 100, 1024, 425);
         pane.add(menuborder, -1);
 
-        currentMenu = MenuState.START;
+        
 
         //jbutton for Buttons
         buttonImg = new ImageIcon("img/buttonbar");
@@ -191,6 +209,7 @@ public class GUI extends JFrame {
                 	System.out.println(path);
                 	try {
                 	tte.sendMessage2("open", path);
+                	statusField.setText("Status: " +"Active");
             		} catch (Exception e1) {
             			// TODO Auto-generated catch block
             			e1.printStackTrace();
@@ -209,6 +228,7 @@ public class GUI extends JFrame {
             public void actionPerformed(ActionEvent e) {
 				try {
 					tte.sendMessage("start");
+					statusField.setText("Status: " +"Active");
 				} catch (Exception e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -226,7 +246,8 @@ public class GUI extends JFrame {
             public void actionPerformed(ActionEvent e) {
             	System.out.println("1");
 							try {
-								tte.sendMessage("stop");
+								tte.sendMessage("pause");
+								statusField.setText("Status: " +"Paused");
 							} catch (Exception e1) {
 								// TODO Auto-generated catch block
 								e1.printStackTrace();
@@ -245,10 +266,30 @@ public class GUI extends JFrame {
             public void actionPerformed(ActionEvent e) {
 				try {
 					tte.sendMessage("delete");
+					undisplayMenu();
 				} catch (Exception e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
+            }
+        });
+        
+        stopButton = new JButton("Stop Torrent");
+        stopButton.setFont(new Font("Raavi", Font.BOLD, 10));
+        stopButton.setVisible(true);
+        stopButton.setBounds(525,25,100,50);
+        pane.add(stopButton,1);
+        
+        stopButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+							try {
+								tte.sendMessage("stop");
+								statusField.setText("Status: " +"Stopped");
+							} catch (Exception e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+            
             }
         });
         
@@ -270,6 +311,7 @@ public class GUI extends JFrame {
                 	System.out.println(path);
                 	try {
                 	tte.sendMessage2("dir", path);
+                	defaultDirField.setText(path);
             		} catch (Exception e1) {
             			// TODO Auto-generated catch block
             			e1.printStackTrace();
@@ -359,6 +401,15 @@ public class GUI extends JFrame {
         });
         
         //TextFields for information about torrent(filename, size, tracker)
+        defaultDirField = new JTextArea();
+        defaultDirField.setFont(new Font("raavi", 0, 10));
+        defaultDirField.setVisible(true);
+        defaultDirField.setBorder(null);
+        defaultDirField.setOpaque(false);
+        defaultDirField.setEditable(false);
+        defaultDirField.setBounds(700,80,300,50);
+        pane.add(defaultDirField, 0);
+        
         fileNameField = new JTextArea("File name:");
         fileNameField.setFont(new Font("raavi", 0, 20));
         fileNameField.setVisible(true);
@@ -460,7 +511,7 @@ public class GUI extends JFrame {
         pane.add(uploadedField, 0);
         
         //end.
-        displayMenu(MenuState.MAIN, MenuState.MAIN);
+//        displayMenu(MenuState.MAIN, MenuState.MAIN);
         conn.add(pane);
         super.setJMenuBar(menuBar);
         super.pack();
@@ -485,12 +536,6 @@ public class GUI extends JFrame {
     		case 7: downloadedField.setText("Downloaded: " +value + "Mb");
     		break;
     		case 8: uploadedField.setText("Downloaded: " +value + "Mb");
-    		break;
-    		case 10: statusField.setText("Status: " +"Active");
-    		break;
-    		case 11: statusField.setText("Status: " +"Stopped");
-    		break;
-    		case 13: statusField.setText("Status: " +"Paused");
     		break;
     		}
     	}
