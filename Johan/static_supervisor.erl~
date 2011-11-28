@@ -15,8 +15,6 @@ start_in_shell() ->
 init(_Args) ->
     Torrentdata = {torrentdata, {torrentdata, start_link, []},
 	     transient, 2000, worker, [torrentdata]},
-%    Gui = {gui, {talkToJava, start, []},
-%	   transient, 2000, worker, [talkToJava]},
     Dynamic_Supervisor = {dynamic_supervisor, 
 			  {dynamic_supervisor, start_link, []},
 	                   transient, 2000, supervisor, [dynamic_supervisor]},

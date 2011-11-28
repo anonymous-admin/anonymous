@@ -12,6 +12,8 @@
 %%% 
 %%%-------------------------------------------------------------------
 
+
+
 -module(torrentdata).
 -export([start_link/0, start_link/1, stop/0]).
 -export([init/1, terminate/2, handle_cast/2, handle_call/3]).
@@ -26,9 +28,7 @@ start_link() ->
     start_link([]).
 
 start_link(_Args) ->
-    gen_server:start_link({local, torrentdata}, ?MODULE, _Args, []),
-    blackboard ! {register_static, torrentdata},
-    blackboard ! {subscribe, torrentdata, [torrentinfo, torrentstatus]}.
+    gen_server:start_link({local, torrentdata}, ?MODULE, _Args, []).
 
 stop() ->
     gen_server:cast(torrentdata, close).
