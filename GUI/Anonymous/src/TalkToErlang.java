@@ -67,7 +67,6 @@ public class TalkToErlang extends Thread
 		myMailBox = myNode.createMbox("mailbox2");
 
 		while(true) {
-			System.out.println("lol1");
 			myObject = myMailBox.receive();
 			
 			myMsg = (OtpErlangTuple) myObject;

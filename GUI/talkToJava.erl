@@ -58,7 +58,7 @@ rec(NodeAtom) ->
 	    
 	{notify, file_path, {TorrentId, Value}} ->
 	    Files = integer_to_list(Value#file_path.files),
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 9, Files};
+	    {mailbox2, NodeAtom} ! {self(), TorrentId, 13, Files};
 
 	{notify, torrent_status, {TorrentId, Value}} ->
 	    case Value of
@@ -81,7 +81,9 @@ rec(NodeAtom) ->
 	{notify, downloaded, {TorrentId, Value}} ->
 	    {mailbox2, NodeAtom} ! {self(), TorrentId, 7, Value};
 	{notify, uploaded, {TorrentId, Value}} ->
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 8, Value}
+	    {mailbox2, NodeAtom} ! {self(), TorrentId, 8, Value};
+	{notify, finished, {TorrentId, Value}} ->
+	    {mailbox2, NodeAtom} ! {self(), TorrentId, 9, "Torrent finished downloading"}
 
     end,
     rec(NodeAtom).

@@ -7,16 +7,18 @@ import java.io.IOException;
 import javax.swing.*;
 
 import com.ericsson.otp.erlang.OtpErlangDecodeException;
+import components.TorrentFilter;
 
-public class GUI extends JFrame {
+public class GUI {
 	
 	JLayeredPane pane;
 	protected JLabel menuborder;
 	protected ImageIcon border;
-	public MenuState currentMenu;
+	public static MenuState currentMenu;
 	protected Container conn;
     protected ImageIcon infoBarImg;
     protected ImageIcon buttonImg;
+    protected ImageIcon trashImg;
     protected JLabel buttonBoarder;
     protected JButton button1;
     protected JButton button2;
@@ -54,21 +56,17 @@ public class GUI extends JFrame {
     final JFileChooser fc2 = new JFileChooser();
     protected JProgressBar progressBar;
     protected TalkToErlang tte;
-    final JOptionPane optionPane = new JOptionPane(
-    	    "Do you really want to delete this torrent? all data will be lost",
-    	    JOptionPane.QUESTION_MESSAGE,
-    	    JOptionPane.YES_NO_OPTION);
-
+    static JFrame frame;
 	
     public enum MenuState {
         MAIN, START, OPTION, ABOUT
     }
     
     public GUI(TalkToErlang obj) {
-        super("Anonymous");
-        super.setSize(1024, 550);
-        super.setPreferredSize(new Dimension(1024,550));
-        super.setIconImage(new ImageIcon("img/titleimg.png").getImage());
+    	frame = new JFrame("Anonymous");
+        frame.setSize(1024, 550);
+        frame.setPreferredSize(new Dimension(1024,550));
+        frame.setIconImage(new ImageIcon("img/titleimg.png").getImage());
         fc2.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         tte = obj;
         setUpGui();
@@ -122,12 +120,10 @@ public class GUI extends JFrame {
      * to null. At last it calls the garbage collector, making sure that anything not visble
      * is not allocated in the memory.
      */
-    public void undisplayMenu() {
+    public static void undisplayMenu() {
 
         switch (currentMenu) {
         case MAIN: // set all visual objects unique for main menu to null (this will work since this method will be called before the currentMenu is changed)
-//            menuborder.setVisible(false);
-//            menuborder = null;
             fileNameField.setText("File name:");
             fileSizeField.setText("File size:");
             trackerField.setText("Tracker:");
@@ -140,7 +136,7 @@ public class GUI extends JFrame {
             downloadedField.setText("Downloaded:");
             uploadedField.setText("Uploaded:");
             java.lang.Runtime.getRuntime().gc(); //this comes last just before break
-//            break;
+            break;
 //        case OPTION:
 //            menuborder.setVisible(false);
 //            menuborder = null;
@@ -161,12 +157,12 @@ public class GUI extends JFrame {
      */
     public void setUpGui() {
 
-        setLayout(new BorderLayout());
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
-        setResizable(false);
+        frame.setLayout(new BorderLayout());
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        frame.setResizable(false);
 
-        conn = super.getContentPane();
+        conn = frame.getContentPane();
         currentMenu = MenuState.MAIN;
         
         //layeredpane
@@ -189,7 +185,7 @@ public class GUI extends JFrame {
         buttonBoarder = new JLabel(buttonImg);
         buttonImg = null;
         buttonBoarder.setVisible(true);
-        buttonBoarder.setBounds(0,0,1024,100);
+        buttonBoarder.setBounds(1024,100,1024,0);
         pane.add(buttonBoarder, 0);
         
         button1 = new JButton("Add Torrent");
@@ -200,6 +196,7 @@ public class GUI extends JFrame {
         
         button1.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
+            	fc.addChoosableFileFilter(new TorrentFilter());
             	int returnval = fc.showOpenDialog(button1);
             	if (returnval == JFileChooser.CANCEL_OPTION) {
             		System.out.println("canceled by user"); 
@@ -255,15 +252,25 @@ public class GUI extends JFrame {
             
             }
         });
-        
-        button5 = new JButton("Delete Torrent");
+        trashImg = new ImageIcon("img/trash.png");
+        button5 = new JButton();
+        button5.setIcon(trashImg);
         button5.setFont(new Font("Raavi", Font.BOLD, 10));
         button5.setVisible(true);
-        button5.setBounds(400,25,100,50);
+        button5.setBorder(null);
+        button5.setBounds(400,25,trashImg.getIconWidth(),trashImg.getIconHeight());
         pane.add(button5,1);
         
         button5.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
+               	int returnval = JOptionPane.showConfirmDialog(
+               		    frame,
+               		    "Would you really want to delete this torrent? all data will be lost",
+               		    "Delete torrent?",
+               		    JOptionPane.YES_NO_OPTION);
+            	if (returnval == JOptionPane.NO_OPTION) {
+            		System.out.println("canceled by user"); 
+            	} else {
 				try {
 					tte.sendMessage("delete");
 					undisplayMenu();
@@ -271,6 +278,7 @@ public class GUI extends JFrame {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
+            	}
             }
         });
         
@@ -513,9 +521,9 @@ public class GUI extends JFrame {
         //end.
 //        displayMenu(MenuState.MAIN, MenuState.MAIN);
         conn.add(pane);
-        super.setJMenuBar(menuBar);
-        super.pack();
-        super.setVisible(true);
+        frame.setJMenuBar(menuBar);
+        frame.pack();
+        frame.setVisible(true);
     }
     	public static void setField(String torrentId, int tag,String value) {
     		switch (tag) {
@@ -537,6 +545,11 @@ public class GUI extends JFrame {
     		break;
     		case 8: uploadedField.setText("Downloaded: " +value + "Mb");
     		break;
+    		case 9: undisplayMenu();
+    				JOptionPane.showMessageDialog(frame,
+    				value);
+    		break;
+    		case 10:
     		}
     	}
 
