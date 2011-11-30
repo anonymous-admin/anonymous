@@ -35,12 +35,20 @@ notify_processes([], _, _, _) ->
 	ok;
 
 notify_processes([{Subscriber,TorrentId}|T], TorrentId, Event, Var) ->
-	Subscriber ! {notify, Event, {TorrentId, Var}},%CANT SEND MESSAGE TO NONREGISTERED PROCESS AAAAAAAAAAAAAAAAAAAAAAAAAA
-	io:format("event sent to ~p,~n", [Subscriber]),
-	notify_processes(T, TorrentId, Event, Var);
+	
+    Subscriber ! {notify, Event, {TorrentId, Var}},%CANT SEND MESSAGE TO NONREGISTERED PROCESS AAAAAAAAAAAAAAAAAAAAAAAAAA
+    io:format("event sent to ~p,~n", [Subscriber]),
+    notify_processes(T, TorrentId, Event, Var);
 
-notify_processes([{_,Id}|T], TorrentId, Event, Var) ->	
-	notify_processes(T, TorrentId, Event, Var).
+notify_processes([{Subscriber,Id}|T], TorrentId, Event, Var) ->	
+    case Id of 
+	-1 ->
+	    Subscriber ! {notify, Event, {TorrentId, Var}},
+	    io:format("event sent to ~p,~n", [Subscriber]),
+	    notify_processes(T, TorrentId, Event, Var);
+	_Else ->
+	    notify_processes(T, TorrentId, Event, Var)
+	end.	
 
 
 route_messages(Processes,Interests) ->
