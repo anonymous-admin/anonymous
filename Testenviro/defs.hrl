@@ -21,15 +21,24 @@
 %%       pieces (both integers).
 %% @end
 %%--------------------------------------------------------------------	
--record(torrent,
-       {id,
-	size,
-	downloaded,
-	percent,
-	pieces,
-	pieces_finished,
-        trackers,
-        max_peers}).
+-record(torrent, {
+   id, 
+   info_hash_tracker, 
+   announce, 
+   creation_date, 
+   comment, 
+   created_by, 
+   encoding, files,
+   filename, 
+   piece_length, 
+   number_of_pieces,
+   file_length,
+   bitfield,
+   trackers,
+   downloaded,
+   size,
+   max_peers
+  }).
 
 -record(tracker_info,
 	{url,
@@ -48,4 +57,4 @@
 %% @doc defs.hrl
 %% @spec Defenition of the file which the DETS table in 
 %%       torrentdata.erl is saved to.
--define(DATAFILE, torrentdatafile). 
+-define(DATAFILE, databasefile). 

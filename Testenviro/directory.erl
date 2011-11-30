@@ -1,5 +1,5 @@
 -module(directory).
--export([handle_directories/2,set_wdir/1,make_path/2,t/0,]).
+-export([handle_directories/2,set_wdir/1,make_path/2,t/0]).
 -record(torrent,{filename = "parent", files = [[["second","ssecond","2.docx"],123],[["first","ffirst","1.txt"],456]]}).
  
   %% This is for test.
