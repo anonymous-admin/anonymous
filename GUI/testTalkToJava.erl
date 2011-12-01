@@ -1,0 +1,38 @@
+-module(testTalkToJava).
+-export([start/0]).
+%-include("defs.hrl").
+
+start() ->
+    ComputerName = net_adm:localhost(),
+    NodeName = "javaNode@" ++ ComputerName,
+    NodeAtom = list_to_atom(NodeName),
+    timer:sleep(2000),
+    {mailbox, NodeAtom} ! {self(), "startconnection"},
+    %%blackboard ! {register_static, gui},
+    %%blackboard ! {subscribe, gui, [torrent_info, torrent_status, tracker_info, seeders, leechers, uploaded, downloaded, left, torrent_size, file_name, pieces, download_speed, upload_speed]},
+    rec(NodeAtom, now()).
+
+
+rec(NodeAtom, {_,_,Value}) ->
+TorrentId = "torrent1",
+
+	    {mailbox2, NodeAtom} ! {self(), TorrentId, 0, integer_to_list(Value*2)},
+
+	    {mailbox2, NodeAtom} ! {self(), TorrentId, 1, integer_to_list(Value*3)},
+
+	    {mailbox2, NodeAtom} ! {self(), TorrentId, 3, integer_to_list(Value*5)},
+
+	    {mailbox2, NodeAtom} ! {self(), TorrentId, 4, integer_to_list(Value*4)},
+
+	    {mailbox2, NodeAtom} ! {self(), TorrentId, 5, integer_to_list(Value+200)},
+
+	    {mailbox2, NodeAtom} ! {self(), TorrentId, 6, integer_to_list(Value+300)},
+
+	    {mailbox2, NodeAtom} ! {self(), TorrentId, 7, integer_to_list(Value+200)},
+
+	    {mailbox2, NodeAtom} ! {self(), TorrentId, 8, integer_to_list(Value-200)},
+
+	    {mailbox2, NodeAtom} ! {self(), TorrentId, 9, "Torrent finished downloading"},
+
+    rec(NodeAtom, now()).
+
