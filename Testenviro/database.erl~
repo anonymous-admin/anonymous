@@ -27,7 +27,6 @@ start_link() ->
 
 start_link(_Args) ->
     gen_server:start_link({local, database}, ?MODULE, _Args, []).
-%    blackboard ! {register_static, database},
 %    blackboard ! {subscribe, database, [torrentinfo, torrentstatus]}.
 
 stop() ->
