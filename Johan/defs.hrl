@@ -8,19 +8,6 @@
 %%%-------------------------------------------------------------------
 
 %%--------------------------------------------------------------------
-%% Interest tags
-%%
-%%      Tag (atom)       | Process that  |    Expected msg     |
-%%                       | is interested |                     |
-%% ----------------------|---------------|---------------------|
-%% insert_torrent_record | torrentdata   | {insert, Record}    |
-%% update_torrent_record | torrentdata   | {update, Record}    |
-%% delete_torrent_record | torrentdata   | {delete, Key}       |
-%% lookup_torrent_record | torrentdata   | {lookup, Key}       |     
-%% 
-%%--------------------------------------------------------------------
-
-%%--------------------------------------------------------------------
 %% @author Johan Wikström Schützer
 %% @doc defs.hrl
 %% @spec Definition of the record 'torrent'.
@@ -61,4 +48,4 @@
 %% @doc defs.hrl
 %% @spec Defenition of the file which the DETS table in 
 %%       torrentdata.erl is saved to.
--define(DATAFILE, torrentdatafile). 
+-define(DATAFILE, databasefile). 

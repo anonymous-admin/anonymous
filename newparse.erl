@@ -4,6 +4,14 @@
 -module(newparse).
 -export([parse/1,decode/1]).
 
+%-----------------------------------------------------------------------
+% Test stuff, to be removed when functions are verified
+-export([log/1]).
+
+log(Data) ->
+    file:write_file("parsedtorrent.txt",io_lib:fwrite("~p.\n",[Data])).
+%-----------------------------------------------------------------------
+
 parse(F)->
      {ok,Info}=file:read_file(F),
      decode(Info).

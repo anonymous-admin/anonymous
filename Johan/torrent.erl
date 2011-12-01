@@ -26,7 +26,7 @@ handle_call(Operation, _From, {Dict, Entries}) ->
 spawn_trackers([], Dict, Entries) ->
     {Dict, Entries};
 spawn_trackers([H|T], Dict, Entries) -> 
-    {_, Pid} = tracker_supevisor:start_tracker([H]),
+    {_, Pid} = dynamic_supevisor:start_tracker([H]),
     Result = gen_server:call(Pid, info_to_send(H,"started")),
     [_Seeders,_Leechers,Interval,_Peers] = Result,
     gen_server:cast(logger, Result),

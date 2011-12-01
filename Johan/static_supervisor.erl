@@ -5,16 +5,18 @@
 -export([start_link/0, start_in_shell/0, init/1]).
 
 start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, static_supervisor}, ?MODULE, []).
 
 start_in_shell() ->
-    {ok, Pid} = supervisor:start_link({local, ?MODULE}, ?MODULE, []),
+    {ok, Pid} = supervisor:start_link({local, static_supervisor}, ?MODULE, []),
     unlink(Pid),
     {ok, Pid}.
 
 init(_Args) ->
     Torrentdata = {torrentdata, {torrentdata, start_link, []},
 	     transient, 2000, worker, [torrentdata]},
+%    Gui = {gui, {talkToJava, start, []},
+%	   transient, 2000, worker, [talkToJava]},
     Dynamic_Supervisor = {dynamic_supervisor, 
 			  {dynamic_supervisor, start_link, []},
 	                   transient, 2000, supervisor, [dynamic_supervisor]},

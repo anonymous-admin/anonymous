@@ -6,6 +6,7 @@ public class Main {
     	new GUI(tte);
     	
     	try {
+    		Thread.sleep(2000);
 			tte.startConnection();
 			tte.receive();
 		} catch (Exception e) {
