@@ -65,7 +65,7 @@ public class GUI {
     protected static int fileSize;
 	
     public enum MenuState {
-        MAIN, START, OPTION, ABOUT
+        MAIN, START, START2, START3
     }
     
     public GUI(TalkToErlang obj) {
@@ -89,7 +89,7 @@ public class GUI {
         case MAIN: // do all the stuff needed to display the objects unique for main menu (intialize, set all bounds, add to layered pane etc etc)
 
             //MainBorder
-            border = new ImageIcon("img/mainbar.png");
+            border = new ImageIcon(getClass().getClassLoader().getResource("/resources/mainbar.png"));
             menuborder = new JLabel(border);
             border = null;
             menuborder.setVisible(true);
@@ -97,10 +97,10 @@ public class GUI {
             pane.add(menuborder, -1);
             System.out.println("currentmenu = main");
             break;
-        case OPTION:
+        case START:
 
             //MainBorder
-            border = new ImageIcon(getClass().getResource("/mainbar.png"));
+            border = new ImageIcon(getClass().getClassLoader().getResource("/resources/mainbar.png"));
             menuborder = new JLabel(border);
             border = null;
             menuborder.setVisible(true);
@@ -108,16 +108,19 @@ public class GUI {
             pane.add(menuborder, -1);
             break;
 
-        case ABOUT:
+        case START2:
 
             //Mainborder
-            border = new ImageIcon(getClass().getResource("/mainbar.png"));
+            border = new ImageIcon(getClass().getClassLoader().getResource("/resources/mainbar.png"));
             menuborder = new JLabel(border);
             border = null;
             menuborder.setVisible(true);
             menuborder.setBounds(0, 0, 1024, 425);
             pane.add(menuborder, -1);
             break;
+            
+        case START3:
+        	break;
         }
     }
     
@@ -176,7 +179,8 @@ public class GUI {
         
         
         // main jlabel
-        border = new ImageIcon(getClass().getResource("/mainbar.png"));
+        System.out.println(getClass().getClassLoader().getResource("resources/mainbar.png"));
+        border = new ImageIcon("resources/mainbar.png");
         menuborder = new JLabel(border);
         menuborder.setVisible(true);
         menuborder.setBounds(0, 100, border.getIconWidth(), border.getIconHeight());
@@ -184,14 +188,14 @@ public class GUI {
         pane.add(menuborder, -1);
 
         //jlabel for Buttons
-        buttonImg = new ImageIcon(getClass().getResource("/buttonbar.png"));
+        buttonImg = new ImageIcon("resources/buttonbar.png");
         buttonBoarder = new JLabel(buttonImg);
         buttonBoarder.setVisible(true);
         buttonBoarder.setBounds(0,0,buttonImg.getIconWidth(),buttonImg.getIconHeight());
         buttonImg = null;
         pane.add(buttonBoarder, -1);
         
-        addImg = new ImageIcon(getClass().getResource("/add.png"));
+        addImg = new ImageIcon("resources/add.png");
         button1 = new JButton(addImg);
         button1.setFont(new Font("Raavi", Font.BOLD, 10));
         button1.setToolTipText("Open a new torrent file");
@@ -223,7 +227,7 @@ public class GUI {
             }
         });
         
-        startImg = new ImageIcon(getClass().getResource("/play.png"));
+        startImg = new ImageIcon("resources/play.png");
         button3 = new JButton(startImg);
         button3.setFont(new Font("Raavi", Font.BOLD, 10));
         button3.setToolTipText("Starts a paused or stopped torrent");
@@ -238,6 +242,9 @@ public class GUI {
             public void actionPerformed(ActionEvent e) {
 				try {
 					tte.sendMessage("start");
+					button3.setVisible(false);
+					button4.setVisible(true);
+					stopButton.setVisible(true);
 					statusField.setText("Status: " +"Active");
 				} catch (Exception e1) {
 					// TODO Auto-generated catch block
@@ -246,7 +253,7 @@ public class GUI {
             }
         });
         
-        pauseImg = new ImageIcon(getClass().getResource("/pause.png"));
+        pauseImg = new ImageIcon("resources/pause.png");
         button4 = new JButton(pauseImg);
         button4.setFont(new Font("Raavi", Font.BOLD, 10));
         button4.setVisible(true);
@@ -261,6 +268,9 @@ public class GUI {
             public void actionPerformed(ActionEvent e) {
             	System.out.println("1");
 							try {
+								button4.setVisible(false);
+								stopButton.setVisible(false);
+								button3.setVisible(true);
 								tte.sendMessage("pause");
 								statusField.setText("Status: " +"Paused");
 							} catch (Exception e1) {
@@ -271,7 +281,7 @@ public class GUI {
             }
         });
         
-        stopImg = new ImageIcon(getClass().getResource("/stop.png"));
+        stopImg = new ImageIcon("resources/stop.png");
         stopButton = new JButton(stopImg);
         stopButton.setFont(new Font("Raavi", Font.BOLD, 10));
         stopButton.setVisible(true);
@@ -285,6 +295,9 @@ public class GUI {
         stopButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
 							try {
+								stopButton.setVisible(false);
+								button4.setVisible(false);
+								button3.setVisible(true);
 								tte.sendMessage("stop");
 								statusField.setText("Status: " +"Stopped");
 							} catch (Exception e1) {
@@ -295,7 +308,7 @@ public class GUI {
             }
         });
         
-        trashImg = new ImageIcon(getClass().getResource("/trash.png"));
+        trashImg = new ImageIcon("resources/trash.png");
         button5 = new JButton();
         button5.setIcon(trashImg);
         button5.setFont(new Font("Raavi", Font.BOLD, 10));
@@ -328,7 +341,7 @@ public class GUI {
             }
         });
         
-        downloadDirImg = new ImageIcon(getClass().getResource("/downloaddir.png"));
+        downloadDirImg = new ImageIcon("resources/downloaddir.png");
         button6 = new JButton(downloadDirImg);
         button6.setFont(new Font("Raavi", Font.BOLD, 10));
         button6.setVisible(true);
@@ -422,8 +435,8 @@ public class GUI {
             	JFrame optionFrame = new JFrame("Options");
             	optionFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             	JLabel emptyLabel = new JLabel();
-            	new ImageIcon(getClass().getResource("/downloaddir.png"));
-            	optionFrame.setIconImage(new ImageIcon(getClass().getResource("/titleimg.png")).getImage());
+            	new ImageIcon("resources/downloaddir.png");
+            	optionFrame.setIconImage(new ImageIcon("resources/titleimg.png").getImage());
             	optionFrame.getContentPane().add(emptyLabel, BorderLayout.CENTER);
             	optionFrame.setSize(200, 200);
             	optionFrame.setPreferredSize(new Dimension(200,200));

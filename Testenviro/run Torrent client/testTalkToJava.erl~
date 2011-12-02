@@ -6,7 +6,7 @@ start() ->
     ComputerName = net_adm:localhost(),
     NodeName = "javaNode@" ++ ComputerName,
     NodeAtom = list_to_atom(NodeName),
-    timer:sleep(3000),
+    timer:sleep(7000),
     {mailbox, NodeAtom} ! {self(), "startconnection"},
     %%blackboard ! {register_static, gui},
     %%blackboard ! {subscribe, gui, [torrent_info, torrent_status, tracker_info, seeders, leechers, uploaded, downloaded, left, torrent_size, file_name, pieces, download_speed, upload_speed]},
