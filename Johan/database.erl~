@@ -15,7 +15,7 @@
 -module(torrentdata).
 -export([start_link/0, start_link/1, stop/0]).
 -export([init/1, terminate/2, handle_cast/2, handle_call/3]).
--export([create_record/5]).
+-export([create_record/8]).
 -behaviour(gen_server).
 
 -include("defs.hrl").
@@ -26,7 +26,9 @@ start_link() ->
     start_link([]).
 
 start_link(_Args) ->
-    gen_server:start_link({local, torrentdata}, ?MODULE, _Args, []).
+    gen_server:start_link({local, torrentdata}, ?MODULE, _Args, []),
+    blackboard ! {register_static, torrentdata},
+    blackboard ! {subscribe, torrentdata, [torrentinfo, torrentstatus]}.
 
 stop() ->
     gen_server:cast(torrentdata, close).
