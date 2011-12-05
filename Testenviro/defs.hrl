@@ -1,14 +1,14 @@
 %%%-------------------------------------------------------------------
-%%% @author Johan Wikström Schützer
-%%% @copyright (C) 2011 Johan Wikström Schützer
+%%% @author Johan Wikstrï¿½m Schï¿½tzer
+%%% @copyright (C) 2011 Johan Wikstrï¿½m Schï¿½tzer
 %%% @doc torrentdata.erl
 %%%
 %%% @end
-%%% Created : 18 Nov 2011 by Johan Wikström Schützer
+%%% Created : 18 Nov 2011 by Johan Wikstrï¿½m Schï¿½tzer
 %%%-------------------------------------------------------------------
 
 %%--------------------------------------------------------------------
-%% @author Johan Wikström Schützer
+%% @author Johan Wikstrï¿½m Schï¿½tzer
 %% @doc defs.hrl
 %% @spec Definition of the record 'torrent'.
 %%       The 'Id' will be used as a key when calling the lookup/2
@@ -33,6 +33,7 @@
    piece_length, 
    number_of_pieces,
    file_length,
+   pieces,
    bitfield,
    trackers,
    downloaded,
@@ -53,7 +54,7 @@
 	 interval}).
 
 %%--------------------------------------------------------------------
-%% @author Johan Wikström Schützer
+%% @author Johan Wikstrï¿½m Schï¿½tzer
 %% @doc defs.hrl
 %% @spec Defenition of the file which the DETS table in 
 %%       torrentdata.erl is saved to.
