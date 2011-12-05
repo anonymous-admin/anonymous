@@ -55,7 +55,7 @@ create_record(FileName) ->
 	     created_by = Created_by, encoding = Encoding, files = Files,
 	     filename = Filename, piece_length = Piece_length, 
 	     number_of_pieces = Number_of_pieces, file_length = File_length,
-	     bitfield = Bitfield }.
+	     pieces = Pieces, bitfield = Bitfield }.
 
 
 read_file(FileName) ->
