@@ -21,9 +21,9 @@ init_sender(ProcessName) ->
 
 handle_messages(ProcessName) ->
     receive
-	{notify, Event, {Id, Var}} ->
-	    io:format("received ~p~n", [Event]),
-	    io:format("event ~p received for Tid: ~p~n", [Var, Id]),
+	{notify, Event, {TorrentId, Var}} ->
+	    io:format("received"),
+	    io:format("event ~p received for Tid: ~p~n", [Var, TorrentId]),
 	    handle_messages(ProcessName);
 	stop ->
 	    ok
