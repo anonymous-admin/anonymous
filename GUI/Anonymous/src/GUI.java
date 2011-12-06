@@ -2,6 +2,8 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
 
 import javax.swing.*;
@@ -16,6 +18,7 @@ public class GUI {
 	protected ImageIcon border;
 	public static MenuState currentMenu;
 	protected Container conn;
+	protected ImageIcon fileContentImg;
     protected ImageIcon infoBarImg;
     protected ImageIcon buttonImg;
     protected ImageIcon trashImg;
@@ -25,13 +28,13 @@ public class GUI {
     protected ImageIcon addImg;
     protected ImageIcon downloadDirImg;
     protected JLabel buttonBoarder;
-    protected JButton button1;
-    protected JButton button2;
-    protected JButton button3;
-    protected JButton button4;
-    protected JButton button5;
-    protected JButton stopButton;
-    protected JButton button6;
+    protected JButton addButton;
+    protected static JButton startButton;
+    protected static JButton pauseButton;
+    protected JButton trashButton;
+    protected static JButton stopButton;
+    protected JButton downloadDirButton;
+    protected static JButton fileContentButton;
     protected JMenuBar menuBar;
     protected JMenu fileMenu;
     protected JMenuItem menuItem;
@@ -57,6 +60,7 @@ public class GUI {
     protected static JTextArea downloadedField;
     protected static JTextArea uploadedField;
     protected static JTextArea defaultDirField;
+    protected static JLabel openToStart;
     final JFileChooser fc = new JFileChooser();
     final JFileChooser fc2 = new JFileChooser();
     protected static JProgressBar progressBar;
@@ -65,7 +69,7 @@ public class GUI {
     protected static int fileSize;
 	
     public enum MenuState {
-        MAIN, START, OPTION, ABOUT
+        MAIN, START, START2, START3
     }
     
     public GUI(TalkToErlang obj) {
@@ -80,44 +84,30 @@ public class GUI {
     }
     
     public void displayMenu(MenuState current, final MenuState previous) {
-
-        undisplayMenu(); // we test this position first, before the change of currentMenu, to see how that works out
+//        undisplayMenu(); // we test this position first, before the change of currentMenu, to see how that works out
 
         currentMenu = current;
 
         switch (currentMenu) {
         case MAIN: // do all the stuff needed to display the objects unique for main menu (intialize, set all bounds, add to layered pane etc etc)
-
-            //MainBorder
-            border = new ImageIcon("img/mainbar.png");
-            menuborder = new JLabel(border);
-            border = null;
-            menuborder.setVisible(true);
-            menuborder.setBounds(0, 100, 1024, 425);
-            pane.add(menuborder, -1);
-            System.out.println("currentmenu = main");
+        	openToStart = new JLabel("Add a torrent to start downloading");
+        	openToStart.setFont(new Font("Aharoni", Font.BOLD, 30));
+        	openToStart.setVisible(true);
+        	openToStart.setBorder(null);
+        	openToStart.setBounds(250,300,550,50);
+            pane.add(openToStart,1);
             break;
-        case OPTION:
-
-            //MainBorder
-            border = new ImageIcon(getClass().getResource("/mainbar.png"));
-            menuborder = new JLabel(border);
-            border = null;
-            menuborder.setVisible(true);
-            menuborder.setBounds(0, 0, 1024, 425);
-            pane.add(menuborder, -1);
+        case START:
+        	setTorrentState();
             break;
 
-        case ABOUT:
+        case START2:
 
-            //Mainborder
-            border = new ImageIcon(getClass().getResource("/mainbar.png"));
-            menuborder = new JLabel(border);
-            border = null;
-            menuborder.setVisible(true);
-            menuborder.setBounds(0, 0, 1024, 425);
-            pane.add(menuborder, -1);
+
             break;
+            
+        case START3:
+        	break;
         }
     }
     
@@ -130,30 +120,52 @@ public class GUI {
 
         switch (currentMenu) {
         case MAIN: // set all visual objects unique for main menu to null (this will work since this method will be called before the currentMenu is changed)
-            fileNameField.setText("File name:");
-            fileSizeField.setText("File size:");
-            trackerField.setText("Tracker:");
-            statusField.setText("Status:");
-            timeLeftField.setText("Time left:");
-            downloadSpeedField.setText("Download speed:");
-            uploadSpeedField.setText("Upload speed:");
-            seedersField.setText("Seeders:");
-            leechersField.setText("Leechers:");
-            downloadedField.setText("Downloaded:");
-            uploadedField.setText("Uploaded:");
-            java.lang.Runtime.getRuntime().gc(); //this comes last just before break
+            openToStart.setVisible(false);
+            openToStart = null;
+        	java.lang.Runtime.getRuntime().gc(); //this comes last just before break
             break;
-//        case OPTION:
-//            menuborder.setVisible(false);
-//            menuborder = null;
-//            java.lang.Runtime.getRuntime().gc(); //this comes last just before break
-//            break;
+        case START:
+        	fileNameField.setVisible(false);
+            fileNameField = null;
+            fileSizeField.setVisible(false);
+            fileSizeField = null;
+            trackerField.setVisible(false);
+            trackerField = null;
+            statusField.setVisible(false);
+            statusField = null;
+            timeLeftField.setVisible(false);
+            timeLeftField = null;
+            downloadSpeedField.setVisible(false);
+            downloadSpeedField = null;
+            uploadSpeedField.setVisible(false);
+            uploadSpeedField = null;
+            seedersField.setVisible(false);
+            seedersField = null;
+            leechersField.setVisible(false);
+            leechersField = null;
+            downloadedField.setVisible(false);
+            downloadedField = null;
+            uploadedField.setVisible(false);
+            uploadedField = null;
+            progressBar.setVisible(false);
+            progressBar = null;
+            startButton.setVisible(false);
+            startButton = null;
+            pauseButton.setVisible(false);
+            pauseButton = null;
+            stopButton.setVisible(false);
+            stopButton = null;
+            fileContentButton.setVisible(false);
+            fileContentButton = null;
+            java.lang.Runtime.getRuntime().gc();
+            break;
 //
-//        case ABOUT:
-//            menuborder.setVisible(false);
-//            menuborder = null;
+//        case START2:
 //            java.lang.Runtime.getRuntime().gc(); //this comes last just before break
 //            break;
+//        case START3:
+//          java.lang.Runtime.getRuntime().gc(); //this comes last just before break
+//          break;
         }
 
     }
@@ -164,19 +176,36 @@ public class GUI {
     public void setUpGui() {
 
         frame.setLayout(new BorderLayout());
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.setResizable(false);
 
+        frame.addWindowListener(new WindowAdapter()
+        {
+              public void windowClosing(WindowEvent e)
+              {
+            	  try {
+					tte.sendMessage("exit");
+					System.exit(0);
+				} catch (Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+              }
+        });
+
         conn = frame.getContentPane();
-        currentMenu = MenuState.MAIN;
+        
         
         //layeredpane
         pane = new JLayeredPane();
         pane.setBounds(0, 25, 1024, 600);
         
+        displayMenu(MenuState.MAIN, MenuState.MAIN);
+        currentMenu = MenuState.MAIN;
         
         // main jlabel
-        border = new ImageIcon(getClass().getResource("/mainbar.png"));
+        System.out.println(getClass().getClassLoader().getResource("resources/mainbar.png"));
+        border = new ImageIcon("resources/mainbar.png");
         menuborder = new JLabel(border);
         menuborder.setVisible(true);
         menuborder.setBounds(0, 100, border.getIconWidth(), border.getIconHeight());
@@ -184,33 +213,35 @@ public class GUI {
         pane.add(menuborder, -1);
 
         //jlabel for Buttons
-        buttonImg = new ImageIcon(getClass().getResource("/buttonbar.png"));
+        buttonImg = new ImageIcon("resources/buttonbar.png");
         buttonBoarder = new JLabel(buttonImg);
         buttonBoarder.setVisible(true);
         buttonBoarder.setBounds(0,0,buttonImg.getIconWidth(),buttonImg.getIconHeight());
         buttonImg = null;
         pane.add(buttonBoarder, -1);
         
-        addImg = new ImageIcon(getClass().getResource("/add.png"));
-        button1 = new JButton(addImg);
-        button1.setFont(new Font("Raavi", Font.BOLD, 10));
-        button1.setToolTipText("Open a new torrent file");
-        button1.setVisible(true);
-        button1.setBorder(null);
-        button1.setContentAreaFilled(false);
-        button1.setBounds(25,20,addImg.getIconWidth(),addImg.getIconHeight());
+        addImg = new ImageIcon("resources/add.png");
+        addButton = new JButton(addImg);
+        addButton.setToolTipText("Open a new torrent file");
+        addButton.setVisible(true);
+        addButton.setBorder(null);
+        addButton.setContentAreaFilled(false);
+        addButton.setBounds(25,20,addImg.getIconWidth(),addImg.getIconHeight());
         addImg = null;
-        pane.add(button1,1);
+        pane.add(addButton,1);
         
-        button1.addActionListener(new ActionListener() {
+        addButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
             	fc.addChoosableFileFilter(new TorrentFilter());
-            	int returnval = fc.showOpenDialog(button1);
+            	int returnval = fc.showOpenDialog(addButton);
             	if (returnval == JFileChooser.CANCEL_OPTION) {
             		System.out.println("canceled by user"); 
             	} else {
                 	String path;
+                	undisplayMenu();
+                	displayMenu(MenuState.START, MenuState.MAIN);
                 	path = fc.getSelectedFile().getAbsolutePath();
+                	fileNameField.setText("File name: " +fc.getSelectedFile().getName());
                 	System.out.println(path);
                 	try {
                 	tte.sendMessage2("open", path);
@@ -223,126 +254,22 @@ public class GUI {
             }
         });
         
-        startImg = new ImageIcon(getClass().getResource("/play.png"));
-        button3 = new JButton(startImg);
-        button3.setFont(new Font("Raavi", Font.BOLD, 10));
-        button3.setToolTipText("Starts a paused or stopped torrent");
-        button3.setVisible(true);
-        button3.setBorder(null);
-        button3.setContentAreaFilled(false);
-        button3.setBounds(150,20,startImg.getIconWidth(),startImg.getIconHeight());
-        startImg = null;
-        pane.add(button3,1);
+
         
-        button3.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-				try {
-					tte.sendMessage("start");
-					statusField.setText("Status: " +"Active");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-            }
-        });
-        
-        pauseImg = new ImageIcon(getClass().getResource("/pause.png"));
-        button4 = new JButton(pauseImg);
-        button4.setFont(new Font("Raavi", Font.BOLD, 10));
-        button4.setVisible(true);
-        button4.setBorder(null);
-        button4.setToolTipText("Pauses torrent");
-        button4.setContentAreaFilled(false);
-        button4.setBounds(275,20,pauseImg.getIconWidth(),pauseImg.getIconHeight());
-        pauseImg = null;
-        pane.add(button4,1);
-        
-        button4.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-            	System.out.println("1");
-							try {
-								tte.sendMessage("pause");
-								statusField.setText("Status: " +"Paused");
-							} catch (Exception e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							}
-            
-            }
-        });
-        
-        stopImg = new ImageIcon(getClass().getResource("/stop.png"));
-        stopButton = new JButton(stopImg);
-        stopButton.setFont(new Font("Raavi", Font.BOLD, 10));
-        stopButton.setVisible(true);
-        stopButton.setToolTipText("Stops a downloading torrent");
-        stopButton.setBorder(null);
-        stopButton.setContentAreaFilled(false);
-        stopButton.setBounds(400,20,stopImg.getIconWidth(),stopImg.getIconHeight());
-        pane.add(stopButton,1);
-        stopImg = null;
-        
-        stopButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-							try {
-								tte.sendMessage("stop");
-								statusField.setText("Status: " +"Stopped");
-							} catch (Exception e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							}
-            
-            }
-        });
-        
-        trashImg = new ImageIcon(getClass().getResource("/trash.png"));
-        button5 = new JButton();
-        button5.setIcon(trashImg);
-        button5.setFont(new Font("Raavi", Font.BOLD, 10));
-        button5.setVisible(true);
-        button5.setToolTipText("Remove torrent");
-        button5.setContentAreaFilled(false);
-        button5.setBorder(null);
-        button5.setBounds(525,20,trashImg.getIconWidth(),trashImg.getIconHeight());
-        trashImg = null;
-        pane.add(button5,1);
-        
-        button5.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-               	int returnval = JOptionPane.showConfirmDialog(
-               		    frame,
-               		    "Would you really want to delete this torrent? all data will be lost",
-               		    "Delete torrent?",
-               		    JOptionPane.YES_NO_OPTION);
-            	if (returnval == JOptionPane.NO_OPTION) {
-            		System.out.println("canceled by user"); 
-            	} else {
-				try {
-					tte.sendMessage("delete");
-					undisplayMenu();
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-            	}
-            }
-        });
-        
-        downloadDirImg = new ImageIcon(getClass().getResource("/downloaddir.png"));
-        button6 = new JButton(downloadDirImg);
-        button6.setFont(new Font("Raavi", Font.BOLD, 10));
-        button6.setVisible(true);
-        button6.setBorder(null);
-        button6.setToolTipText("Choose a download directory");
-        button6.setContentAreaFilled(false);
-        button6.setBounds(920,20,downloadDirImg.getIconWidth(),downloadDirImg.getIconHeight());
+        downloadDirImg = new ImageIcon("resources/downloaddir.png");
+        downloadDirButton = new JButton(downloadDirImg);
+        downloadDirButton.setVisible(true);
+        downloadDirButton.setBorder(null);
+        downloadDirButton.setToolTipText("Choose a download directory");
+        downloadDirButton.setContentAreaFilled(false);
+        downloadDirButton.setBounds(920,20,downloadDirImg.getIconWidth(),downloadDirImg.getIconHeight());
         downloadDirImg = null;
-        pane.add(button6,1);
+        pane.add(downloadDirButton,1);
         
         
-        button6.addActionListener(new ActionListener() {
+        downloadDirButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-            	int returnval = fc2.showOpenDialog(button6);
+            	int returnval = fc2.showOpenDialog(downloadDirButton);
             	if (returnval == JFileChooser.CANCEL_OPTION) {
             		System.out.println("canceled by user"); 
             	} else {
@@ -360,91 +287,6 @@ public class GUI {
             }
         });
         
-        //Progress Bar
-        
-        progressBar = new JProgressBar(0, 100);
-        progressBar.setValue(0);
-        progressBar.setStringPainted(true);
-        progressBar.setVisible(true);
-        progressBar.setForeground(Color.ORANGE);
-        progressBar.setBackground(Color.black);
-        progressBar.setFont(new Font("Aharoni", 0, 25));
-        progressBar.setBounds(20, 450, 980, 50);
-        pane.add(progressBar, 0);
-        //Need to add the functionality of the progressbar. calculation of task (dl speed/size/pieces needs to be taken in consideration).
-        //Add torrent buttons actionListener needs to be connected to this.
-
-        
-        //Menubar
-        menuBar = new JMenuBar();
-        //MenuItems
-        fileMenu = new JMenu("File");
-        fileMenu.setMnemonic(KeyEvent.VK_F);
-        menuBar.add(fileMenu);
-        settingMenu = new JMenu("Settings");
-        settingMenu.setMnemonic(KeyEvent.VK_F);
-        menuBar.add(settingMenu);
-        helpMenu = new JMenu("Help");
-        helpMenu.setMnemonic(KeyEvent.VK_F);
-        menuBar.add(helpMenu);
-
-        //FileMenu Items
-        openMenuItem = new JMenuItem("Add Torrent", KeyEvent.VK_N);
-//		openMenuItem.addActionListener(openTorrentListener);
-        fileMenu.add(openMenuItem);
-        
-        openMenuItem.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-            	int returnval = fc.showOpenDialog(openMenuItem);
-            	if (returnval == JFileChooser.CANCEL_OPTION) {
-            		System.out.println("canceled by user"); 
-            	} else {
-                	String path;
-                	path = fc.getSelectedFile().getAbsolutePath();
-                	System.out.println(path);
-                	try {
-                	tte.sendMessage2("open", path);
-            		} catch (Exception e1) {
-            			// TODO Auto-generated catch block
-            			e1.printStackTrace();
-            		}
-            	}
-            }
-        });
-        
-        //Setting Menu Items
-        optionMenuItem = new JMenuItem("Options", KeyEvent.VK_N);
-//		openUrlMenuItem.addActionListener(optionMenuItemListener);
-        settingMenu.add(optionMenuItem);
-        
-        optionMenuItem.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-            	JFrame optionFrame = new JFrame("Options");
-            	optionFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            	JLabel emptyLabel = new JLabel();
-            	new ImageIcon(getClass().getResource("/downloaddir.png"));
-            	optionFrame.setIconImage(new ImageIcon(getClass().getResource("/titleimg.png")).getImage());
-            	optionFrame.getContentPane().add(emptyLabel, BorderLayout.CENTER);
-            	optionFrame.setSize(200, 200);
-            	optionFrame.setPreferredSize(new Dimension(200,200));
-            	optionFrame.setResizable(false);
-            	optionFrame.pack();
-            	optionFrame.setVisible(true);
-            }
-        });
-        
-        //Help Menu Items
-        aboutMenuItem = new JMenuItem("About", KeyEvent.VK_N);
-//		aboutMenuItem.addActionListener(aboutMenuItemListener);
-        helpMenu.add(aboutMenuItem);
-        
-        aboutMenuItem.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-            	//about case or new frame?
-            }
-        });
-        
-        //TextFields for information about torrent(filename, size, tracker)
         defaultDirField = new JTextArea();
         defaultDirField.setFont(new Font("Aharoni", 0, 10));
         defaultDirField.setVisible(true);
@@ -454,113 +296,273 @@ public class GUI {
         defaultDirField.setBounds(700,80,300,50);
         pane.add(defaultDirField, 0);
         
-        fileNameField = new JTextArea("File name:");
-        fileNameField.setFont(new Font("Aharoni", 0, 20));
-        fileNameField.setVisible(true);
-        fileNameField.setBorder(null);
-        fileNameField.setOpaque(false);
-        fileNameField.setEditable(false);
-        fileNameField.setBounds(20, 120, 400, 50);
-        pane.add(fileNameField, 0);
+        //Menubar
+        menuBar = new JMenuBar();
+        //MenuItems
+        helpMenu = new JMenu("Help");
+        helpMenu.setMnemonic(KeyEvent.VK_F);
+        menuBar.add(helpMenu);
+
+        //Help Menu Items
+        aboutMenuItem = new JMenuItem("About", KeyEvent.VK_N);
+        helpMenu.add(aboutMenuItem);
         
-        fileSizeField = new JTextArea("File size:");
-        fileSizeField.setFont(new Font("Aharoni", 0, 20));
-        fileSizeField.setVisible(true);
-        fileSizeField.setBorder(null);
-        fileSizeField.setOpaque(false);
-        fileSizeField.setEditable(false);
-        fileSizeField.setBounds(20, 170, 400, 50);
-        pane.add(fileSizeField, 0);
+        aboutMenuItem.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+            	//about case or new frame?
+            }
+        });
         
-        trackerField = new JTextArea("Tracker:");
-        trackerField.setFont(new Font("Aharoni", 0, 20));
-        trackerField.setVisible(true);
-        trackerField.setBorder(null);
-        trackerField.setOpaque(false);
-        trackerField.setEditable(false);
-        trackerField.setBounds(20, 220, 400, 50);
-        pane.add(trackerField, 0);
-        
-        statusField = new JTextArea("Status:");
-        statusField.setFont(new Font("Aharoni", 0, 20));
-        statusField.setVisible(true);
-        statusField.setBorder(null);
-        statusField.setOpaque(false);
-        statusField.setEditable(false);
-        statusField.setBounds(20, 270, 400, 50);
-        pane.add(statusField, 0);
-        
-        timeLeftField = new JTextArea("Time left:");
-        timeLeftField.setFont(new Font("Aharoni", 0, 20));
-        timeLeftField.setVisible(true);
-        timeLeftField.setBorder(null);
-        timeLeftField.setOpaque(false);
-        timeLeftField.setEditable(false);
-        timeLeftField.setBounds(750, 120, 200, 50);
-        pane.add(timeLeftField, 0);
-        
-        //seeders,leechers,download & upload speeds
-        downloadSpeedField = new JTextArea("Download speed:");
-        downloadSpeedField.setFont(new Font("Aharoni", 0, 20));
-        downloadSpeedField.setVisible(true);
-        downloadSpeedField.setBorder(null);
-        downloadSpeedField.setOpaque(false);
-        downloadSpeedField.setEditable(false);
-        downloadSpeedField.setBounds(20, 420, 200, 50);
-        pane.add(downloadSpeedField, 0);
-        
-        uploadSpeedField = new JTextArea("Upload speed:");
-        uploadSpeedField.setFont(new Font("Aharoni", 0, 20));
-        uploadSpeedField.setVisible(true);
-        uploadSpeedField.setBorder(null);
-        uploadSpeedField.setOpaque(false);
-        uploadSpeedField.setEditable(false);
-        uploadSpeedField.setBounds(260, 420, 200, 50);
-        pane.add(uploadSpeedField, 0);
-        
-        seedersField = new JTextArea("Seeders:");
-        seedersField.setFont(new Font("Aharoni", 0, 20));
-        seedersField.setVisible(true);
-        seedersField.setBorder(null);
-        seedersField.setOpaque(false);
-        seedersField.setEditable(false);
-        seedersField.setBounds(500, 420, 200, 50);
-        pane.add(seedersField, 0);
-        
-        leechersField = new JTextArea("Leechers:");
-        leechersField.setFont(new Font("Aharoni", 0, 20));
-        leechersField.setVisible(true);
-        leechersField.setBorder(null);
-        leechersField.setOpaque(false);
-        leechersField.setEditable(false);
-        leechersField.setBounds(740, 420, 200, 50);
-        pane.add(leechersField, 0);
-        
-        downloadedField = new JTextArea("Downloaded:");
-        downloadedField.setFont(new Font("Aharoni", 0, 20));
-        downloadedField.setVisible(true);
-        downloadedField.setBorder(null);
-        downloadedField.setOpaque(false);
-        downloadedField.setEditable(false);
-        downloadedField.setBounds(750, 170, 200, 50);
-        pane.add(downloadedField, 0);
-        
-        uploadedField = new JTextArea("Uploaded:");
-        uploadedField.setFont(new Font("Aharoni", 0, 20));
-        uploadedField.setVisible(true);
-        uploadedField.setBorder(null);
-        uploadedField.setOpaque(false);
-        uploadedField.setEditable(false);
-        uploadedField.setBounds(750, 220, 200, 50);
-        pane.add(uploadedField, 0);
-        
-        //end.
-//        displayMenu(MenuState.MAIN, MenuState.MAIN);
+
         conn.add(pane);
         frame.setJMenuBar(menuBar);
         frame.pack();
         frame.setVisible(true);
     }
+    	public void setTorrentState() {
+    		
+    		 startImg = new ImageIcon("resources/play.png");
+             startButton = new JButton(startImg);
+             startButton.setToolTipText("Starts a paused or stopped torrent");
+             startButton.setVisible(false);
+             startButton.setBorder(null);
+             startButton.setContentAreaFilled(false);
+             startButton.setBounds(150,20,startImg.getIconWidth(),startImg.getIconHeight());
+             startImg = null;
+             pane.add(startButton,1);
+             
+             startButton.addActionListener(new ActionListener() {
+                 public void actionPerformed(ActionEvent e) {
+     				try {
+     					tte.sendMessage("start");
+     					startButton.setVisible(false);
+     					pauseButton.setVisible(true);
+     					stopButton.setVisible(true);
+     					statusField.setText("Status: " +"Active");
+     				} catch (Exception e1) {
+     					// TODO Auto-generated catch block
+     					e1.printStackTrace();
+     				}
+                 }
+             });
+             
+             pauseImg = new ImageIcon("resources/pause.png");
+             pauseButton = new JButton(pauseImg);
+             pauseButton.setVisible(true);
+             pauseButton.setBorder(null);
+             pauseButton.setToolTipText("Pauses torrent");
+             pauseButton.setContentAreaFilled(false);
+             pauseButton.setBounds(275,20,pauseImg.getIconWidth(),pauseImg.getIconHeight());
+             pauseImg = null;
+             pane.add(pauseButton,1);
+             
+             pauseButton.addActionListener(new ActionListener() {
+                 public void actionPerformed(ActionEvent e) {
+                 	System.out.println("1");
+     							try {
+     								pauseButton.setVisible(false);
+     								stopButton.setVisible(false);
+     								startButton.setVisible(true);
+     								tte.sendMessage("pause");
+     								statusField.setText("Status: " +"Paused");
+     							} catch (Exception e1) {
+     								// TODO Auto-generated catch block
+     								e1.printStackTrace();
+     							}
+                 
+                 }
+             });
+             
+             stopImg = new ImageIcon("resources/stop.png");
+             stopButton = new JButton(stopImg);
+             stopButton.setVisible(true);
+             stopButton.setToolTipText("Stops a downloading torrent");
+             stopButton.setBorder(null);
+             stopButton.setContentAreaFilled(false);
+             stopButton.setBounds(400,20,stopImg.getIconWidth(),stopImg.getIconHeight());
+             pane.add(stopButton,1);
+             stopImg = null;
+             
+             stopButton.addActionListener(new ActionListener() {
+                 public void actionPerformed(ActionEvent e) {
+     							try {
+     								stopButton.setVisible(false);
+     								pauseButton.setVisible(false);
+     								startButton.setVisible(true);
+     								tte.sendMessage("stop");
+     								statusField.setText("Status: " +"Stopped");
+     							} catch (Exception e1) {
+     								// TODO Auto-generated catch block
+     								e1.printStackTrace();
+     							}
+                 
+                 }
+             });
+             
+             fileContentImg = new ImageIcon("resources/files.png");
+             fileContentButton = new JButton(fileContentImg);
+             fileContentButton.setVisible(true);
+             fileContentButton.setToolTipText("Display downloading content");
+             fileContentButton.setBorder(null);
+             fileContentButton.setContentAreaFilled(false);
+             fileContentButton.setBounds(20,320,fileContentImg.getIconWidth(),fileContentImg.getIconHeight());
+             pane.add(fileContentButton,1);
+             fileContentImg = null;
+             
+             fileContentButton.addActionListener(new ActionListener() {
+                 public void actionPerformed(ActionEvent e) {
+    
+                 }
+             });
+             
+             trashImg = new ImageIcon("resources/trash.png");
+             trashButton = new JButton();
+             trashButton.setIcon(trashImg);
+             trashButton.setVisible(true);
+             trashButton.setToolTipText("Remove torrent");
+             trashButton.setContentAreaFilled(false);
+             trashButton.setBorder(null);
+             trashButton.setBounds(525,20,trashImg.getIconWidth(),trashImg.getIconHeight());
+             trashImg = null;
+             pane.add(trashButton,1);
+             
+             trashButton.addActionListener(new ActionListener() {
+                 public void actionPerformed(ActionEvent e) {
+                    	int returnval = JOptionPane.showConfirmDialog(
+                    		    frame,
+                    		    "Would you really want to delete this torrent? all data will be lost",
+                    		    "Delete torrent?",
+                    		    JOptionPane.YES_NO_OPTION);
+                 	if (returnval == JOptionPane.NO_OPTION) {
+                 		System.out.println("canceled by user"); 
+                 	} else {
+     				try {
+     					undisplayMenu();
+     					displayMenu(MenuState.MAIN, MenuState.START);
+     					tte.sendMessage("delete");
+     				} catch (Exception e1) {
+     					// TODO Auto-generated catch block
+     					e1.printStackTrace();
+     				}
+                 	}
+                 }
+             });
+
+             //TextFields for information about torrent(filename, size, tracker)       
+             fileNameField = new JTextArea("File name:");
+             fileNameField.setFont(new Font("Aharoni", 0, 20));
+             fileNameField.setVisible(true);
+             fileNameField.setBorder(null);
+             fileNameField.setOpaque(false);
+             fileNameField.setEditable(false);
+             fileNameField.setBounds(20, 120, 500, 50);
+             pane.add(fileNameField, 0);
+             
+             fileSizeField = new JTextArea("File size:");
+             fileSizeField.setFont(new Font("Aharoni", 0, 20));
+             fileSizeField.setVisible(true);
+             fileSizeField.setBorder(null);
+             fileSizeField.setOpaque(false);
+             fileSizeField.setEditable(false);
+             fileSizeField.setBounds(20, 170, 400, 50);
+             pane.add(fileSizeField, 0);
+             
+             trackerField = new JTextArea("Tracker:");
+             trackerField.setFont(new Font("Aharoni", 0, 20));
+             trackerField.setVisible(true);
+             trackerField.setBorder(null);
+             trackerField.setOpaque(false);
+             trackerField.setEditable(false);
+             trackerField.setBounds(20, 220, 400, 50);
+             pane.add(trackerField, 0);
+             
+             statusField = new JTextArea("Status:");
+             statusField.setFont(new Font("Aharoni", 0, 20));
+             statusField.setVisible(true);
+             statusField.setBorder(null);
+             statusField.setOpaque(false);
+             statusField.setEditable(false);
+             statusField.setBounds(20, 270, 400, 50);
+             pane.add(statusField, 0);
+             
+             timeLeftField = new JTextArea("Time left:");
+             timeLeftField.setFont(new Font("Aharoni", 0, 20));
+             timeLeftField.setVisible(true);
+             timeLeftField.setBorder(null);
+             timeLeftField.setOpaque(false);
+             timeLeftField.setEditable(false);
+             timeLeftField.setBounds(750, 120, 200, 50);
+             pane.add(timeLeftField, 0);
+             
+             //seeders,leechers,download & upload speeds
+             downloadSpeedField = new JTextArea("Download speed:");
+             downloadSpeedField.setFont(new Font("Aharoni", 0, 20));
+             downloadSpeedField.setVisible(true);
+             downloadSpeedField.setBorder(null);
+             downloadSpeedField.setOpaque(false);
+             downloadSpeedField.setEditable(false);
+             downloadSpeedField.setBounds(20, 420, 200, 50);
+             pane.add(downloadSpeedField, 0);
+             
+             uploadSpeedField = new JTextArea("Upload speed:");
+             uploadSpeedField.setFont(new Font("Aharoni", 0, 20));
+             uploadSpeedField.setVisible(true);
+             uploadSpeedField.setBorder(null);
+             uploadSpeedField.setOpaque(false);
+             uploadSpeedField.setEditable(false);
+             uploadSpeedField.setBounds(260, 420, 200, 50);
+             pane.add(uploadSpeedField, 0);
+             
+             seedersField = new JTextArea("Seeders:");
+             seedersField.setFont(new Font("Aharoni", 0, 20));
+             seedersField.setVisible(true);
+             seedersField.setBorder(null);
+             seedersField.setOpaque(false);
+             seedersField.setEditable(false);
+             seedersField.setBounds(500, 420, 200, 50);
+             pane.add(seedersField, 0);
+             
+             leechersField = new JTextArea("Leechers:");
+             leechersField.setFont(new Font("Aharoni", 0, 20));
+             leechersField.setVisible(true);
+             leechersField.setBorder(null);
+             leechersField.setOpaque(false);
+             leechersField.setEditable(false);
+             leechersField.setBounds(740, 420, 200, 50);
+             pane.add(leechersField, 0);
+             
+             downloadedField = new JTextArea("Downloaded:");
+             downloadedField.setFont(new Font("Aharoni", 0, 20));
+             downloadedField.setVisible(true);
+             downloadedField.setBorder(null);
+             downloadedField.setOpaque(false);
+             downloadedField.setEditable(false);
+             downloadedField.setBounds(750, 170, 200, 50);
+             pane.add(downloadedField, 0);
+             
+             uploadedField = new JTextArea("Uploaded:");
+             uploadedField.setFont(new Font("Aharoni", 0, 20));
+             uploadedField.setVisible(true);
+             uploadedField.setBorder(null);
+             uploadedField.setOpaque(false);
+             uploadedField.setEditable(false);
+             uploadedField.setBounds(750, 220, 200, 50);
+             pane.add(uploadedField, 0);
+             
+             //Progress Bar
+             
+             progressBar = new JProgressBar(0, 100);
+             progressBar.setValue(0);
+             progressBar.setStringPainted(true);
+             progressBar.setVisible(true);
+             progressBar.setForeground(Color.ORANGE);
+             progressBar.setBackground(Color.black);
+             progressBar.setFont(new Font("Aharoni", 0, 25));
+             progressBar.setBounds(20, 450, 980, 50);
+             pane.add(progressBar, 0);
+    	}
+    
+    
     	public static void setField(String torrentId, int tag,String value) {
     		switch (tag) {
     		case 0: fileNameField.setText("File name: " + value);

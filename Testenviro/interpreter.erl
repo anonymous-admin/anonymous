@@ -48,13 +48,14 @@ create_record(FileName) ->
     Piece_length = get_piece_length(Parsed_info),
     Number_of_pieces = get_number_of_pieces(Parsed_info),
     File_length = get_file_length(Parsed_info),
+    Pieces = get_pieces(Parsed_info),
     Bitfield = get_bitfield(Parsed_info),
     #torrent{id = Info_hash_handshake, info_hash_tracker = Info_hash_tracker, 
 	     announce = Announce, creation_date = Creation_date, comment = Comment, 
 	     created_by = Created_by, encoding = Encoding, files = Files,
 	     filename = Filename, piece_length = Piece_length, 
 	     number_of_pieces = Number_of_pieces, file_length = File_length,
-	     bitfield = Bitfield }.
+	     pieces = Pieces, bitfield = Bitfield }.
 
 
 read_file(FileName) ->
@@ -131,6 +132,9 @@ get_number_of_pieces({info, Info}) ->
 
 get_file_length({info, Info}) ->
     get_number_of_pieces({info, Info})*get_piece_length({info, Info}).
+
+get_pieces({info, Info}) ->
+    get_info_dec(<<"pieces">>, Info).
 
 get_bitfield({info, Info}) ->
     NumberOfPieces = get_number_of_pieces({info, Info}),
