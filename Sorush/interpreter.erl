@@ -28,13 +28,27 @@ create_record(FileName) ->
     Filename = get_filename(Parsed_info),
     Piece_length = get_piece_length(Parsed_info),
     Number_of_pieces = get_number_of_pieces(Parsed_info),
+    File_length = get_file_length(Parsed_info),
+    Pieces = get_pieces(Parsed_info),
     Bitfield = get_bitfield(Parsed_info),
+    TrackerInfo = tracker_info_record(Announce, Info_hash_tracker, File_length),
     #torrent{id = Info_hash_handshake, info_hash_tracker = Info_hash_tracker, 
 	     announce = Announce, creation_date = Creation_date, comment = Comment, 
 	     created_by = Created_by, encoding = Encoding, files = Files,
 	     filename = Filename, piece_length = Piece_length, 
-	     number_of_pieces = Number_of_pieces, bitfield = Bitfield }.
+	     number_of_pieces = Number_of_pieces,file_length = File_length, 
+	     pieces = Pieces, bitfield = Bitfield, trackers = TrackerInfo, 
+	     downloaded = 0, max_peers = 50 }.
 
+
+tracker_info_record([], _, _)->
+    [];
+tracker_info_record([H|T], Info_hash, File_length)->
+    [#tracker_info{url = H,
+	 info_hash = Info_hash, peer_id = "-AZ4004-znmphhbrij37",
+	 port = 6881, uploaded = 0, downloaded = 0, left = File_length, 
+	 event = started, num_want = 50, interval = 1000}|tracker_info_record(T, Info_hash, File_length)].
+    
 
 read_file(FileName) ->
   {ok, FileContents} = file:read_file(FileName),
@@ -107,6 +121,12 @@ get_number_of_pieces({info, Info}) ->
     PieceHashes = get_info_dec(<<"pieces">>, Info),
     HashLength = 20,
     round(length(binary_to_list(PieceHashes)) / HashLength).
+
+get_file_length({info, Info}) ->
+    get_piece_length({info, Info}) * get_number_of_pieces({info, Info}).
+
+get_pieces({info, Info}) ->
+    get_info_dec(<<"pieces">>, Info).
 
 get_bitfield({info, Info}) ->
     NumberOfPieces = get_number_of_pieces({info, Info}),
