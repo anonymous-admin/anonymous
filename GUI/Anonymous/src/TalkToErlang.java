@@ -48,18 +48,18 @@ public class TalkToErlang extends Thread
 			else {
 			System.out.println("remote is not up");
 			}
-//
-//			myObject = myMbox.receive();
-//
-//		myMsg = (OtpErlangTuple) myObject;
-//		OtpErlangAtom myAtom1 = new OtpErlangAtom("connok");
-//        from = (OtpErlangPid) myMsg.elementAt(0);
-//        OtpErlangObject[] reply = new OtpErlangObject[2];
-//        reply[0] = from;
-//        reply[1] = myAtom1;
-//        OtpErlangTuple myTuple1 = new OtpErlangTuple(reply);
-//        myMbox.send(from, myTuple1);
-//        System.out.println(myTuple1);
+
+			myObject = myMbox.receive();
+
+		myMsg = (OtpErlangTuple) myObject;
+		OtpErlangAtom myAtom1 = new OtpErlangAtom("connok");
+        from = (OtpErlangPid) myMsg.elementAt(0);
+        OtpErlangObject[] reply = new OtpErlangObject[2];
+        reply[0] = from;
+        reply[1] = myAtom1;
+        OtpErlangTuple myTuple1 = new OtpErlangTuple(reply);
+        myMbox.send(from, myTuple1);
+        System.out.println(myTuple1);
         
 	}
 	

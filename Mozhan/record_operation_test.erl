@@ -1,7 +1,6 @@
 -module(record_operation_test).
 -include_lib("eunit/include/eunit.hrl").
 -record (torrent,{filename,files,number_of_pieces,piece_length}).
--record (files_data,{filename,path,size,passed_bytes}).
 
 is_multiple_test_() ->
     [?_assert(record_operation:is_multiple(#torrent{files = novalue}) =:= false),

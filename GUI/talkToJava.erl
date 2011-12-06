@@ -9,7 +9,7 @@ start() ->
     timer:sleep(2000),
     {mailbox, NodeAtom} ! {self(), "startconnection"},
     %%blackboard ! {register_static, gui},
-    %%blackboard ! {subscribe, gui, [torrent_info, torrent_status, tracker_info, seeders, leechers, uploaded, downloaded, left, torrent_size, file_name, pieces, download_speed, upload_speed]},
+    %%blackboard ! {subscribe, gui, exit, torrent_info, torrent_status, tracker_info, seeders, leechers, uploaded, downloaded, left, torrent_size, pieces, download_speed, upload_speed]},
     rec(NodeAtom).
 
 
@@ -20,6 +20,9 @@ rec(NodeAtom) ->
         %%receives from java
 	{_From, connok} ->
 	    io:format("Message received: ~p~n", [connectionok]);   
+	{_Fron, exit} ->
+	    io:format("Message received: ~p~n", [exited]);
+	%%blackboard ! {notify, exit, exit}
 	{_From, open,FileDir} ->
 	    io:format("Message received: ~p~n", [FileDir]);
 	%%blackboard ! {notify, torrent_status, {torrent1, opened}},
@@ -66,8 +69,6 @@ rec(NodeAtom) ->
 	        _ -> ok
 	    end;
 
-	{notify, file_name, {TorrentId, Value}} ->
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 0, Value};
 	{notify, torrent_size, {TorrentId, Value}} ->
 	    {mailbox2, NodeAtom} ! {self(), TorrentId, 1, Value};
 	{notify, download_speed, {TorrentId, Value}} ->

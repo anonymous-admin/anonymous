@@ -48,4 +48,4 @@
 %% @doc defs.hrl
 %% @spec Defenition of the file which the DETS table in 
 %%       torrentdata.erl is saved to.
--define(DATAFILE, torrentdatafile). 
+-define(DATAFILE, databasefile). 
