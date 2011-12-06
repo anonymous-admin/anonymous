@@ -1,16 +1,6 @@
 import java.io.IOException;
-import com.ericsson.otp.erlang.OtpErlangAtom;
-import com.ericsson.otp.erlang.OtpErlangDecodeException;
-import com.ericsson.otp.erlang.OtpErlangExit;
-import com.ericsson.otp.erlang.OtpErlangInt;
-import com.ericsson.otp.erlang.OtpErlangLong;
-import com.ericsson.otp.erlang.OtpErlangObject;
-import com.ericsson.otp.erlang.OtpErlangPid;
-import com.ericsson.otp.erlang.OtpErlangRangeException;
-import com.ericsson.otp.erlang.OtpErlangString;
-import com.ericsson.otp.erlang.OtpErlangTuple;
-import com.ericsson.otp.erlang.OtpMbox;
-import com.ericsson.otp.erlang.OtpNode;
+import com.ericsson.otp.erlang.*;
+
 import java.util.*;
 import java.lang.*;
 import java.net.*;
@@ -21,13 +11,14 @@ public class TalkToErlang extends Thread
 	OtpNode myNode;
 	OtpMbox myMbox;
 	OtpMbox myMailBox;
+	OtpMbox myMailBox2;
     OtpErlangObject myObject;
     OtpErlangTuple myMsg;
     OtpErlangPid from;
     OtpErlangString torrentId;
     OtpErlangString value;
+    OtpErlangList value2;
     OtpErlangLong tag;
-//    OtpErlangInt tag;
     String computerName;
     
 	public TalkToErlang() {

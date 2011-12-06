@@ -5,6 +5,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import javax.swing.*;
 
@@ -13,25 +14,25 @@ import components.TorrentFilter;
 
 public class GUI {
 	
-	JLayeredPane pane;
+	static JLayeredPane pane;
 	protected JLabel menuborder;
 	protected ImageIcon border;
 	public static MenuState currentMenu;
 	protected Container conn;
-	protected ImageIcon fileContentImg;
+	protected static ImageIcon fileContentImg;
     protected ImageIcon infoBarImg;
     protected ImageIcon buttonImg;
-    protected ImageIcon trashImg;
-    protected ImageIcon startImg;
-    protected ImageIcon stopImg;
-    protected ImageIcon pauseImg;
+    protected static ImageIcon trashImg;
+    protected static ImageIcon startImg;
+    protected static ImageIcon stopImg;
+    protected static ImageIcon pauseImg;
     protected ImageIcon addImg;
     protected ImageIcon downloadDirImg;
     protected JLabel buttonBoarder;
     protected JButton addButton;
     protected static JButton startButton;
     protected static JButton pauseButton;
-    protected JButton trashButton;
+    protected static JButton trashButton;
     protected static JButton stopButton;
     protected JButton downloadDirButton;
     protected static JButton fileContentButton;
@@ -64,9 +65,13 @@ public class GUI {
     final JFileChooser fc = new JFileChooser();
     final JFileChooser fc2 = new JFileChooser();
     protected static JProgressBar progressBar;
-    protected TalkToErlang tte;
+    protected static TalkToErlang tte;
     static JFrame frame;
     protected static int fileSize;
+    protected static JInternalFrame internalFrame;
+    protected static Container internalContainer;
+    protected static JTextArea internalTextArea;
+    protected static ArrayList<String> files;
 	
     public enum MenuState {
         MAIN, START, START2, START3
@@ -83,10 +88,9 @@ public class GUI {
         
     }
     
-    public void displayMenu(MenuState current, final MenuState previous) {
-//        undisplayMenu(); // we test this position first, before the change of currentMenu, to see how that works out
-
-        currentMenu = current;
+    public static void displayMenu(MenuState current, final MenuState previous) {
+        	undisplayMenu(); // we test this position first, before the change of currentMenu, to see how that works out
+        	currentMenu = current;
 
         switch (currentMenu) {
         case MAIN: // do all the stuff needed to display the objects unique for main menu (intialize, set all bounds, add to layered pane etc etc)
@@ -120,8 +124,10 @@ public class GUI {
 
         switch (currentMenu) {
         case MAIN: // set all visual objects unique for main menu to null (this will work since this method will be called before the currentMenu is changed)
-            openToStart.setVisible(false);
-            openToStart = null;
+            if(openToStart != null) {
+        	openToStart.setVisible(false);
+            openToStart = null; 
+            }
         	java.lang.Runtime.getRuntime().gc(); //this comes last just before break
             break;
         case START:
@@ -135,6 +141,8 @@ public class GUI {
             statusField = null;
             timeLeftField.setVisible(false);
             timeLeftField = null;
+            trashButton.setVisible(false);
+            trashButton = null;
             downloadSpeedField.setVisible(false);
             downloadSpeedField = null;
             uploadSpeedField.setVisible(false);
@@ -174,10 +182,11 @@ public class GUI {
      * Sets up the GUI at startup.
      */
     public void setUpGui() {
-
+        currentMenu = MenuState.MAIN;
         frame.setLayout(new BorderLayout());
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.setResizable(false);
+        files = new ArrayList<String>();
 
         frame.addWindowListener(new WindowAdapter()
         {
@@ -194,17 +203,12 @@ public class GUI {
         });
 
         conn = frame.getContentPane();
-        
-        
+
         //layeredpane
         pane = new JLayeredPane();
         pane.setBounds(0, 25, 1024, 600);
-        
-        displayMenu(MenuState.MAIN, MenuState.MAIN);
-        currentMenu = MenuState.MAIN;
-        
+
         // main jlabel
-        System.out.println(getClass().getClassLoader().getResource("resources/mainbar.png"));
         border = new ImageIcon("resources/mainbar.png");
         menuborder = new JLabel(border);
         menuborder.setVisible(true);
@@ -238,7 +242,7 @@ public class GUI {
             		System.out.println("canceled by user"); 
             	} else {
                 	String path;
-                	undisplayMenu();
+//                	undisplayMenu();
                 	displayMenu(MenuState.START, MenuState.MAIN);
                 	path = fc.getSelectedFile().getAbsolutePath();
                 	fileNameField.setText("File name: " +fc.getSelectedFile().getName());
@@ -253,9 +257,7 @@ public class GUI {
             	}
             }
         });
-        
 
-        
         downloadDirImg = new ImageIcon("resources/downloaddir.png");
         downloadDirButton = new JButton(downloadDirImg);
         downloadDirButton.setVisible(true);
@@ -313,13 +315,13 @@ public class GUI {
             }
         });
         
-
+        displayMenu(MenuState.MAIN, MenuState.MAIN);
         conn.add(pane);
         frame.setJMenuBar(menuBar);
         frame.pack();
         frame.setVisible(true);
     }
-    	public void setTorrentState() {
+    	public static void setTorrentState() {
     		
     		 startImg = new ImageIcon("resources/play.png");
              startButton = new JButton(startImg);
@@ -369,7 +371,6 @@ public class GUI {
      								// TODO Auto-generated catch block
      								e1.printStackTrace();
      							}
-                 
                  }
              });
              
@@ -411,7 +412,24 @@ public class GUI {
              
              fileContentButton.addActionListener(new ActionListener() {
                  public void actionPerformed(ActionEvent e) {
-    
+                	 internalFrame = new JInternalFrame("Files downloading");
+                	 internalFrame.setSize(300, 300);
+                	 internalFrame.setVisible(true);
+                	 internalFrame.setLocation(400, 200);
+                	 internalFrame.setClosable(true);
+                	 pane.add(internalFrame, 0);
+                	 internalTextArea = new JTextArea();
+                	 internalTextArea.setBounds(0, 0, 400, 200);
+                	 internalTextArea.setVisible(true);
+                	 internalTextArea.setFont(new Font("Aharoni", 0, 15));
+                	 internalTextArea.setBackground(Color.orange);
+                	 internalContainer = internalFrame.getContentPane();
+                	 String text = "";
+                	 for (int i = 0; i < files.size(); i++) {
+                		 text += files.get(i) + "\n";
+                	 }
+                	 internalTextArea.setText(text);
+                	 internalContainer.add(internalTextArea);
                  }
              });
              
@@ -437,7 +455,6 @@ public class GUI {
                  		System.out.println("canceled by user"); 
                  	} else {
      				try {
-     					undisplayMenu();
      					displayMenu(MenuState.MAIN, MenuState.START);
      					tte.sendMessage("delete");
      				} catch (Exception e1) {
@@ -550,7 +567,6 @@ public class GUI {
              pane.add(uploadedField, 0);
              
              //Progress Bar
-             
              progressBar = new JProgressBar(0, 100);
              progressBar.setValue(0);
              progressBar.setStringPainted(true);
@@ -561,35 +577,42 @@ public class GUI {
              progressBar.setBounds(20, 450, 980, 50);
              pane.add(progressBar, 0);
     	}
-    
-    
     	public static void setField(String torrentId, int tag,String value) {
     		switch (tag) {
-    		case 0: fileNameField.setText("File name: " + value);
+    		case 1: if (fileSizeField != null) {
+    			fileSizeField.setText("File size: " + value + " Mb");
+    			fileSize = Integer.parseInt(value);
+    		}
     		break;
-    		case 1: fileSizeField.setText("File size: " + value + " Mb");
-    		fileSize = Integer.parseInt(value);
+    		case 2: if (trackerField != null) 
+    			trackerField.setText("Tracker: " + value);
     		break;
-    		case 2: trackerField.setText("Tracker: " + value);
+    		case 3: if (downloadSpeedField != null)
+    			downloadSpeedField.setText("Download speed: " + value +" Kb/s");
     		break;
-    		case 3: downloadSpeedField.setText("Download speed: " + value +" Kb/s");
+    		case 4: if (uploadSpeedField != null)
+    			uploadSpeedField.setText("Upload speed: " + value +" Kb/s");
     		break;
-    		case 4: uploadSpeedField.setText("Upload speed: " + value +" Kb/s");
+    		case 5: if (seedersField != null)
+    			seedersField.setText("Seeders: " + value);
     		break;
-    		case 5: seedersField.setText("Seeders: " + value);
+    		case 6: if (leechersField != null)
+    			leechersField.setText("Leechers: " + value);
     		break;
-    		case 6: leechersField.setText("Leechers: " + value);
+    		case 7: if (downloadedField != null) {
+    			downloadedField.setText("Downloaded: " +value + "Mb");
+    			progressBar.setValue((int)(Integer.parseInt(value)/(double)fileSize*100));
+    		}
     		break;
-    		case 7: downloadedField.setText("Downloaded: " +value + "Mb");
-    				progressBar.setValue((int)(Integer.parseInt(value)/(double)fileSize*100));
+    		case 8: if (uploadedField != null)
+    			uploadedField.setText("Downloaded: " +value + "Mb");
     		break;
-    		case 8: uploadedField.setText("Downloaded: " +value + "Mb");
+    		case 9: displayMenu(MenuState.MAIN, MenuState.START);
+    				JOptionPane.showMessageDialog(frame,
+    				value);
     		break;
-//    		case 9: undisplayMenu();
-//    				JOptionPane.showMessageDialog(frame,
-//    				value);
-//    		break;
-    		case 10:
+    		case 10: files.add(value);
+    		break;
     		}
     	}
 
