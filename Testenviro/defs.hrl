@@ -38,7 +38,8 @@
    trackers,
    downloaded,
    size,
-   max_peers
+   max_peers,
+   left
   }).
 
 -record(tracker_info,
@@ -58,4 +59,4 @@
 %% @doc defs.hrl
 %% @spec Defenition of the file which the DETS table in 
 %%       torrentdata.erl is saved to.
--define(DATAFILE, databasefile). 
+-define(DATAFILE, databasefile).

@@ -14,14 +14,14 @@ init(_Args) ->
 start_child(Child, Args) ->
     case Child of 
 	tracker ->
-	    Id = Args#tracker_info.url,
-	    TrackerChild = {Id, {tracker_interactor, start_link, [Id, Args]},
+	    Id = list_to_atom(Args#tracker_info.url),
+	    TrackerChild = {Id, {tracker_interactor, start_link, [[Id, Args]]},
 			    transient, 2000, worker, [tracker_interactor]},
-	    supervisor:start_child(dynamic_supervisor, TrackerChild);
+	    Pid = supervisor:start_child(dynamic_supervisor, TrackerChild);
 	torrent -> 
-	    Id = Args#torrent.info_hash_tracker,
-	    TorrentChild = {Id, {torrent, start_link, [Id, Args]},
+	    Id = list_to_atom(binary_to_list(Args#torrent.id)),
+	    TorrentChild = {Id, {torrent, start_link, [[Id, Args]]},
 			    transient, 2000, worker, [torrent]},
-	    supervisor:start_child(dynamic_supervisor, TorrentChild)
+	    Pid = supervisor:start_child(dynamic_supervisor, TorrentChild)
     end,
-    {ok, Id}.
+    {ok, Pid}.

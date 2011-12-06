@@ -33,12 +33,12 @@ handle_cast({notify,Event,{Id,Var}}, Interests) ->
 	    io:format(" event found ~w~n", [Event]),			     
 	    notify_processes(dict:fetch(Event,Interests), Id, Event, Var);		
 	false ->
-	    io:format("no subscriber found for event ~p,~n", [Event])
+	    io:format("no subscriber found for event ~p~n", [Event])
     end,
     {noreply, Interests};
 
 handle_cast({subscribe,ProcessName,[{Interest, Id}|T]}, Interests) ->
-    io:format("received msg subscribe"),		
+    io:format("~p subscribed~n", [ProcessName]),		
 %   case dict:find(ProcessName, Processes) of
 %	{ok, _ProcessesName} ->
 	    {noreply, subscribe_processIntrest([{Interest, Id}|T], ProcessName, Interests)};		
@@ -48,7 +48,7 @@ handle_cast({subscribe,ProcessName,[{Interest, Id}|T]}, Interests) ->
 %    end;
 
 handle_cast({register, ProcessName}, Interests) ->
-    io:format("received msg register_nick"),
+    io:format("received msg register_nick~n"),
     Messages = msg_logger:find_messages(ProcessName),
     lists:foreach(fun(Msg) -> gen_server:cast(ProcessName, Msg) end, Messages),
       {noreply, Interests};
@@ -88,7 +88,7 @@ subscribe_processIntrest([],_ProcessName, Interests) ->
 
 subscribe_processIntrest([{Interest, Id}|T], ProcessName, Interests) ->
 	NewDict = dict:append(Interest,{ProcessName, Id}, Interests),
-	io:format(" dic updated"),
+	io:format("dict updated: ~p, ~p~n", [ProcessName, Interest]),
 	subscribe_processIntrest(T, ProcessName, NewDict).
 	
 notify_processes([], _, _, _) ->	

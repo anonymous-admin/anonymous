@@ -1,6 +1,6 @@
 -module(interpreter).
 -export([create_record/1, get_tracker_response_info/1]).
--export([init/1, handle_cast/2, handle_call/3, terminate/2]).
+-export([init/1, handle_cast/2, handle_call/3]).
 -compile(export_all).
 -behaviour(gen_server).
 -include("defs.hrl").
@@ -11,24 +11,16 @@ start_link() ->
 start_link(_Args) ->
     gen_server:start_link({local, interpreter}, ?MODULE, _Args, []).
 
-init(_Args) ->
-    gen_server:cast(msg_controller, {register, interpreter}),
-    gen_server:cast(msg_controller, {subscribe, interpreter, [{torrent_filepath,-1}]}),
+init(_Args)->
+    io:format("subscribtion sending..."),
+    gen_server:cast(msg_controller, {subscribe, interpreter, [{torrent_filepath, -1}]}),
+    io:format("subscribtion from interpreter"),
     {ok,null}.
 
-stop() ->
-    gen_server:cast(interpreter, stop).
-
-terminate(_Reason, _LoopData) ->
-    gen_server:cast(interpreter, stop).
-
-handle_cast(stop, _LoopData) ->
-    {stop, normal, _LoopData};
-
-handle_cast({torrent_filepath},Path) ->
-    Result = create_record(Path),
-    msg_controller ! {notify, torrent_info, {Result#torrent.id, Result}},
-    {noreply,Result}.
+handle_cast({notify, torrent_filepath, {_Id, Filepath}}, _Data)->
+    Record = create_record(Filepath),
+    gen_server:cast(msg_controller, {notify, torrent_info, {Record#torrent.id, Record}}),
+    {noreply,_Data}.
 
 handle_call(_State,_From,_Data)->
     Reply = ok,
@@ -47,13 +39,27 @@ create_record(FileName) ->
     Filename = get_filename(Parsed_info),
     Piece_length = get_piece_length(Parsed_info),
     Number_of_pieces = get_number_of_pieces(Parsed_info),
+    File_length = get_file_length(Parsed_info),
+    Pieces = get_pieces(Parsed_info),
     Bitfield = get_bitfield(Parsed_info),
+    TrackerInfo = tracker_info_record(Announce, Info_hash_tracker, File_length),
     #torrent{id = Info_hash_handshake, info_hash_tracker = Info_hash_tracker, 
 	     announce = Announce, creation_date = Creation_date, comment = Comment, 
 	     created_by = Created_by, encoding = Encoding, files = Files,
 	     filename = Filename, piece_length = Piece_length, 
-	     number_of_pieces = Number_of_pieces, bitfield = Bitfield }.
+	     number_of_pieces = Number_of_pieces,file_length = File_length, 
+	     pieces = Pieces, bitfield = Bitfield, trackers = TrackerInfo, 
+	     downloaded = 0, max_peers = 50 }.
 
+
+tracker_info_record([], _, _)->
+    [];
+tracker_info_record([H|T], Info_hash, File_length)->
+    [#tracker_info{url = H,
+	 info_hash = Info_hash, peer_id = "-AZ4004-znmphhbrij37",
+	 port = 6881, uploaded = 0, downloaded = 0, left = File_length, 
+	 event = started, num_want = 50, interval = 1000}|tracker_info_record(T, Info_hash, File_length)].
+    
 
 read_file(FileName) ->
   {ok, FileContents} = file:read_file(FileName),
@@ -126,6 +132,12 @@ get_number_of_pieces({info, Info}) ->
     PieceHashes = get_info_dec(<<"pieces">>, Info),
     HashLength = 20,
     round(length(binary_to_list(PieceHashes)) / HashLength).
+
+get_file_length({info, Info}) ->
+    get_piece_length({info, Info}) * get_number_of_pieces({info, Info}).
+
+get_pieces({info, Info}) ->
+    get_info_dec(<<"pieces">>, Info).
 
 get_bitfield({info, Info}) ->
     NumberOfPieces = get_number_of_pieces({info, Info}),

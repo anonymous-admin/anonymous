@@ -1,8 +1,97 @@
 -module(data_handler).
--export([is_complete/2,write_temp/3,get_data/1,check_hash/3,is_ready/3]).
--record(torrent,{filename = "parent", files = [[["second","ssecond","2.docx"],123],[["first","ffirst","1.txt"],456]],number_of_pieces}).
-
+-export([handle_blocks/4]).
+-record(torrent,{filename ,files,number_of_pieces}).
  
+  % A major function that plays the core role. %% should be spawned with an empty dict from main
+  %%%%% This process has to get linked to the main one and if it terminates abnormaly, it should be started with the
+  %%%%%% last dict it has passed.
+  handle_blocks(DataRec,FilesDict,Pid,true)-> % it is multiple
+
+   receive 
+
+    make_dict ->
+          Files_Dict = record_operation:files_dict(DataRec#torrent.files,FilesDict,1),
+	  handle_blocks(DataRec,Files_Dict,Pid,true);	 
+    {set_block,Default_path,Index,Begin,Binary} ->
+      write_temp(Default_path,Begin,Binary),
+       case is_ready(Default_path,DataRec,Index) of 
+         % The piece is full
+         true ->
+           Piece = get_allBlocks(Default_path), % file is deleted afterwads
+          %% check hash value 
+         case  check_hash(Piece,Index,record_operation:get_pieces(DataRec)) of
+
+           false ->
+           io:format("Piece is invalid");
+
+           %% The piece is ready to be written to file
+           true ->
+             PieceLength = record_operation:get_Piece_Length(DataRec),
+             Key = record_operation: findN(FilesDict,1,PieceLength*Index),
+              case  is_LastPiece(DataRec,Index) of 
+                   % it is not the last piece    
+                   false ->
+                      writer:write_files(Piece,Index,PieceLength,FilesDict,Key,false),
+                      Pid ! {ready_piece ,Index} ,
+		      handle_blocks(DataRec,FilesDict,Pid,true);
+		                 
+
+                   % it is the last piece
+                   true ->
+                    writer:write_files(Piece,Index,PieceLength,FilesDict,Key,true),
+                     Pid ! {ready_piece ,Index} ,
+		     handle_blocks(DataRec,FilesDict,Pid,true)
+
+              end
+
+          end ;
+
+
+        % Piece is not ready
+         false -> 
+         handle_blocks(DataRec,FilesDict,Pid,true)
+       end
+ end ; 
+
+
+
+ handle_blocks(DataRec,FilesDict,Pid,false)-> % it is single
+
+   receive 
+
+    {data,Default_path,Index,Begin,Binary} -> % msg style may change!!!!!!
+      write_temp(Default_path,Begin,Binary),
+       case is_ready(Default_path,DataRec,Index) of 
+         % The piece is full
+         true ->
+           Piece = get_allBlocks(Default_path), % file is deleted afterwads
+         %% check hash value 
+         case  check_hash(Piece,Index,record_operation:get_pieces(DataRec)) of
+
+           false ->
+                io:format("Piece is invalid");
+
+           %% The piece is ready to be written to file
+           true ->
+                   FileName = record_operation:get_FileName(DataRec),
+                   PieceLength = record_operation:get_Piece_Length(DataRec),
+		   writer:write_file(Piece,Index,PieceLength,FileName),
+		   Pid ! {ready_piece ,Index} ,
+		   handle_blocks(DataRec,FilesDict,Pid,false)
+
+          end ;
+
+
+        % Piece is not ready
+         false ->
+      	           handle_blocks(DataRec,FilesDict,Pid,false)
+       end
+ end .
+
+
+
+
+
   %% writes each block of data to its pre-defined order.
   write_temp(Dir,Begin,Bin)->
     directory:set_wdir(Dir),
@@ -24,12 +113,11 @@
       false ->
 
             false
-
-    end.
+    end .
 
 
   %% retrieves the data stored in the temp.txt file and deletes the file.
-  get_data(Dir)-> 
+  get_allBlocks(Dir)-> 
     directory:set_wdir(Dir),
     {ok,Bin} = file:read_file("temp.txt"),
     file:delete("temp.txt"),
@@ -50,10 +138,14 @@
       false
    end
     .
-  is_LastPiece(LP_index,LP_index)->
-    true;
-  is_LastPiece(LP_index,Index)->
-    false.
+  is_LastPiece(Rec,Index)->
+     PieceNum = record_operation:get_PieceNum(Rec),
+      case PieceNum-1 == Index of
+        true ->
+          true;
+        false ->
+          false
+      end .
 
   is_ready(Default_path,Rec,Index)->
      case is_LastPiece(record_operation:get_PieceNum(Rec)-1, Index) of

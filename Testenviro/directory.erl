@@ -4,7 +4,7 @@
  
   %% This is for test.
     t()->
-     handle_directories("C:/Users/Mo/Desktop/mtask", #torrent{filename = "parent"})
+     handle_directories("C:/Users/Mo/Desktop/mtask", #torrent{})
   . 
    %% gets a default path and a record of required information of files directories.
    handle_directories(Default_path,Data)->

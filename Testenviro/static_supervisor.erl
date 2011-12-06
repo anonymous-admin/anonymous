@@ -12,18 +12,28 @@ start_in_shell() ->
     unlink(Pid),
     {ok, Pid}.
 
+%% Last row is the kickoff, make sure they start in the correct order.
+
 init(_Args) ->
+    
     Database = {database, {database, start_link, []},
 	     transient, 2000, worker, [database]},
 %    Gui = {gui, {talkToJava, start, []},
 %	   transient, 2000, worker, [talkToJava]},
     Dynamic_Supervisor = {dynamic_supervisor, 
 			  {dynamic_supervisor, start_link, []},
-	                   transient, 2000, supervisor, [dynamic_supervisor]},
-%    Filehandler = {filehandler, {filehandler, start_link, Args},
-%		   transient, 2000, worker, [filerhandler]},
+	                   transient, infinity, supervisor, [dynamic_supervisor]},
+%    Intermediate = {intermediate, {intermediate, start_link, []},
+%		   transient, 2000, worker, [intermediate, data_handler, directory, 
+%					     file_handler, record_operation, writer]},
     Msg_controller = {msg_controller, {msg_controller, start_link, [dict:new()]},
 		      transient, 2000, worker, [msg_controller, msg_logger, server_util]},
     Interpreter = {interpreter, {interpreter, start_link, []},
 		   transient, 2000, worker, [interpreter, parser]},
-    {ok,{{one_for_one,3,1}, [Database, Dynamic_Supervisor, Msg_controller, Interpreter]}}.
+    {ok,{{one_for_one,3,1}, [Msg_controller, 
+%%			     Gui,
+			     Dynamic_Supervisor,
+%%                           Intermediate, 
+			     Database,
+			     Interpreter]}}.
+

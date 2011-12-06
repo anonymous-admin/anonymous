@@ -16,7 +16,4 @@ compile_all() ->
     compile:file(static_supervisor),
     compile:file(talkToJava),
     compile:file(torrent),
-    compile:file(file_handler),
-    compile:file(intermediate),
-    compile:file(writer),
     compile:file(tracker_interactor).

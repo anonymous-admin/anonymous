@@ -27,11 +27,7 @@ start_link() ->
     start_link([]).
 
 start_link(_Args) ->
-    gen_server:start_link({local, database}, ?MODULE, _Args, []),
-    case whereis(msg_controller) of
-	undefined -> ok;
-	_	  -> gen_server:cast(msg_controller, {subscribe, database, [torrent_info, torrent_status]})
-    end.
+    gen_server:start_link({local, database}, ?MODULE, _Args, []).
 
 stop() ->
     gen_server:cast(database, stop).
@@ -41,9 +37,10 @@ init(_Args) ->
     dets:to_ets(?DATAFILE, ets:new(database_table, [set, named_table])),
     case whereis(msg_controller) of
 	undefined -> false;
-	_         -> notify_blackboard()
+	_         -> gen_server:cast(msg_controller, {subscribe, database, [{torrent_info,-1}, {torrent_status,-1}]}),
+	             notify_blackboard()
     end,
-    {ok, null}.
+    {ok, _Args}.
 
 terminate(_Reason, _LoopData) ->
     gen_server:cast(database, stop).
@@ -152,5 +149,5 @@ notify_blackboard() ->
 
 notify_blackboard([]) -> ok;
 notify_blackboard([H|T]) ->
-    gen_server:cast(msg_controller, {notify, torrent_info, {H#torrent.info_hash_tracker, H}}),
+    gen_server:cast(msg_controller, {notify, torrent_info, {H#torrent.id, H}}),
     notify_blackboard(T).

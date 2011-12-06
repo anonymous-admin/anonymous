@@ -9,7 +9,9 @@
 %%%            Notes: From simple server to gen_server
 %%%            01 Dec 2011 by Johan Wikström Schützer
 %%%            Notes: From operation dependent to independent
-%%% 
+%%%            05 Dec 2011 by Johan Wikström Schützer
+%%%            Notes: Added blackboard notification
+%%%
 %%%-------------------------------------------------------------------
 
 -module(database).
@@ -25,8 +27,7 @@ start_link() ->
     start_link([]).
 
 start_link(_Args) ->
-    gen_server:start_link({local, database}, ?MODULE, _Args, []),
-    gen_server:cast(msg_controller, {subscribe, database, [torrent_info, torrent_status]}).
+    gen_server:start_link({local, database}, ?MODULE, _Args, []).
 
 stop() ->
     gen_server:cast(database, stop).
@@ -34,7 +35,13 @@ stop() ->
 init(_Args) ->
     dets:open_file(?DATAFILE, [{type, set}]),
     dets:to_ets(?DATAFILE, ets:new(database_table, [set, named_table])),
-    {ok, null}.
+    case whereis(msg_controller) of
+	undefined -> false;
+	_         -> io:format("database subscribtion"),
+                     gen_server:cast(msg_controller, {subscribe, database, [{torrent_info,-1}, {torrent_status,-1}]}),
+	             notify_blackboard()
+    end,
+    {ok, _Args}.
 
 terminate(_Reason, _LoopData) ->
     gen_server:cast(database, stop).
@@ -75,8 +82,7 @@ insert(TorrentId, Record) ->
 update(TorrentId, Tag, Value) ->
     case ets:lookup(database_table, TorrentId) of
 	[] -> {error, no_existing_record};
-        [Record] -> 
-	    delete(TorrentId),
+        [{TorrentId, Record}] -> 
 	    case Tag of
 		id ->
 		    ets:insert(database_table, {TorrentId, Record#torrent{id = Value}});
@@ -138,3 +144,11 @@ dump_table() ->
     ets:to_dets(database_table, ?DATAFILE),
     dets:sync(?DATAFILE),
     dets:close(?DATAFILE).
+
+notify_blackboard() ->
+    notify_blackboard(ets:tab2list(database_table)).
+
+notify_blackboard([]) -> ok;
+notify_blackboard([H|T]) ->
+    gen_server:cast(msg_controller, {notify, torrent_info, {H#torrent.id, H}}),
+    notify_blackboard(T).
