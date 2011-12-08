@@ -209,7 +209,6 @@ create_bitfield_binary(0) ->
 create_bitfield_binary(NumberOfPieces) ->
   LeaderLength = (8 - NumberOfPieces rem 8) rem 8,
   create_bitfield_binary(<<>>, LeaderLength, NumberOfPieces).
-
 create_bitfield_binary(Binary, 0, 0) ->
     Binary;
 create_bitfield_binary(Binary, 0, NumberOfPieces) ->
