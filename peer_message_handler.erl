@@ -12,7 +12,7 @@ msg_handler(Messages,PID) ->
 	Msg ->
 	    io:format("msg rcv length ~w~n",[length(Msg)]),
 	    msg_handler(Messages ++ Msg,PID)
-    after 5000 ->
+    after 10000 ->
 	    if
 		length(Messages) > 0 ->
 		    io:format("time out2 ~n"),
@@ -29,13 +29,10 @@ check_messages(Msg,Buff,PID) ->
 	[19,66,105,116|_Rest] ->
 	    _Handshake_response = lists:sublist(Msg,68),
 	    PID ! {handshake_response,_Handshake_response},
-	    %io:format("handshake response is : ~w~n",[_Handshake_response]),
 	    <<Bitfield_length:32>> = list_to_binary(lists:sublist(Msg,69,4)),
-	    %io:format("bitfield length is : ~w~n",[Bitfield_length]),
 	    Bitfield = lists:sublist(Msg,73,Bitfield_length),
 	    PID ! {bitfield,Bitfield},
 	    PID ! send_interest,
-	    %io:format("bitfield is : ~w~n",[Bitfield]),
 	    New_length = 72+Bitfield_length,
 	    if 
 		length(Msg) > New_length ->
@@ -54,6 +51,15 @@ check_messages(Msg,Buff,PID) ->
 		true ->
 		    msg_handler([],PID)
 	    end;
+	[0,0,0,1,0|_Rest] ->
+	    PID ! get_choke,
+	    if
+		length(Msg) > 5 ->
+		    New_Msg = lists:nthlist(5,Msg),
+		    check_messages(New_Msg,Buff,PID);
+		true ->
+		    msg_handler([],PID)
+	    end;
 	    %% if 
 	    %% 	lists:nth(2,Status) == 0 ->
 	    %% 	    gen_tcp:send(Socket,<<0,0,1,2>>),
@@ -63,6 +69,7 @@ check_messages(Msg,Buff,PID) ->
 		%%    ok
 %	    end;
 	[0,0,0,5|Rest] ->
+	    %%io:format("the real piece index is : ~w~n",[list_to_binary(lists:sublist(lists:nthtail(1,Rest),4))]),
 	    <<Piece_index:32>> = list_to_binary(lists:sublist(lists:nthtail(1,Rest),4)),
 	    if 
 		length(Msg) > 9 ->
@@ -70,24 +77,47 @@ check_messages(Msg,Buff,PID) ->
 		    PID ! {peer_have_piece,Piece_index},
 		    check_messages(New_Msg,Buff,PID);
 		true ->
+		    %%PID ! send_interest,
 		    msg_handler([],PID)
 	    end;
-	[0,0,0,0] ->
+	[0,0,0,0|_R] ->
 	    PID ! get_keep_alive,
-	    msg_handler([],PID);	
+	    if 
+		length(Msg) > 4 ->
+		    New_Msg = lists:nthtail(4,Msg),
+		    check_messages(New_Msg,Buff,PID);
+		true ->
+		    msg_handler([],PID)
+	    end;
+	[0,0,0,3,9|_R]->
+	    port;
 	_ ->
 	    <<Length:32>> = list_to_binary(lists:sublist(Msg,4)),
-	    if 
-		length(Msg) > Length ->
+	    io:format("msg length : ~w         block length : ~w ",[length(Msg),Length]),
+	    Identifier = lists:nth(5,Msg),
+	    if
+		 Identifier == 7 ->
 		    Index = lists:sublist(Msg,6,4),
 		    Begin = lists:sublist(Msg,10,4),
 		    Block = lists:sublist(Msg,14,Length - 9),
-		    PID ! {recieved_piece,Index,Begin,Block};
+		    PID ! {recieved_piece,Index,Begin,Block},
+		    if 
+			length(Msg) > Length+4 ->
+			    New_Msg = lists:nthtail(4+Length,Msg),
+			    check_messages(New_Msg,Buff,PID);
+			true ->
+			    io:format("rest is ~w",[Msg]),
+			    msg_handler([],PID)
+		    end;
 		true ->
-		    io:format("rest is ~w",[Msg])
+		    io:format("other message is : ~p~n",[Msg])
 	    end
     end.
 
+%%check_length(Msg,Length)->
+%%    ok.
+
+    
 		
 	    
 	    
