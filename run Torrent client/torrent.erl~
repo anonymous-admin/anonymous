@@ -47,7 +47,8 @@ spawn_trackers([], Dict, Entries, _Id) ->
     {Dict, Entries};
 spawn_trackers([H|T], Dict, Entries, Id) -> 
     %%THIS FAR
-    {_, Pid} = dynamic_supervisor:start_child(tracker, H),
+    {_, Pid} = dynamic_supervisor:start_tracker(H),
+    io:format("Tracker process: ~p~n", [Pid]),
     Result = gen_server:call(Pid, info_to_send(H,"started")),
     [Seeders,Leechers,Interval,Peers] = Result,
     NewH = H#tracker_info{interval=Interval},

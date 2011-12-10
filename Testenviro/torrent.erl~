@@ -7,10 +7,10 @@
 
 init(Torrent_info) ->
     Id = Torrent_info#torrent.id,
-    gen_server:cast(msg_controller, {subscribe, [{torrent_status, Id}, 
-						 {torrent_info, Id},
-						 {downloaded, Id},
-						 {left, Id}]}),
+    gen_server:cast(msg_controller, {subscribe, Id, [{torrent_status, Id}, 
+						     {torrent_info, Id},
+						     {downloaded, Id},
+						     {left, Id}]}),
     Dict = dict:new(),
     Dynamics = {Torrent_info#torrent.downloaded, Torrent_info#torrent.left},
     {NewDict, Entries} = spawn_trackers(Torrent_info#torrent.trackers, Dict, 1, Id),
@@ -24,7 +24,8 @@ start_link([Id, Torrent_info]) ->
 
 handle_cast({notify, Tag, {Id, Value}}, {Id, Dict, Entries, {Downloaded, Left}}) ->
     case Tag of 
-	torrent_info   -> Dynamics = {Value#torrent.downloaded, Value#torrent.left};
+	torrent_info   -> io:format("~p got torrent_info~n", [Id]),
+	                  Dynamics = {Value#torrent.downloaded, Value#torrent.left};
 	downloaded     -> Dynamics = {Value, Left};
         left           -> Dynamics = {Downloaded, Value};
         torrent_status -> notify_trackers(Dict, Value, Entries),

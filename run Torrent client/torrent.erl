@@ -10,9 +10,9 @@ init([Id, Torrent_info]) ->
 						     {downloaded, Id},
 						     {left, Id}]}),
     Dict = dict:new(),
-    Dynamics = {Torrent_info#torrent.downloaded, Torrent_info#torrent.left},
-    {NewDict, Entries} = spawn_trackers(Torrent_info#torrent.trackers, Dict, 1, Id),
-    {ok, {Id, NewDict, Entries, Dynamics}}.
+    Dynamics = {Torrent_info#torrent.downloaded, Torrent_info#torrent.left, Torrent_info#torrent.max_peers},
+    spawn(fun() -> spawn_trackers(Torrent_info#torrent.trackers, Dict, 1, Id) end),
+    {ok, {Id, Dict, 0, Dynamics}}.
 
 terminate(_Reason, {_Id, _Dict, _Entries, _Dynamics}) ->
     ok.
@@ -20,12 +20,16 @@ terminate(_Reason, {_Id, _Dict, _Entries, _Dynamics}) ->
 start_link([Id, Torrent_info]) ->
     gen_server:start_link({local, Id}, ?MODULE, [Id, Torrent_info], []).
 
-handle_cast({notify, Tag, {Id, Value}}, {Id, Dict, Entries, {Downloaded, Left}}) ->
+handle_cast({trackerinfo, {NewDict, NewEntries}}, {Id, _Dict, _Entries, Dynamics}) ->
+    {noreply, {Id, NewDict, NewEntries, Dynamics}}; 
+
+handle_cast({notify, Tag, {Id, Value}}, {Id, Dict, Entries, {Downloaded, Left, Max_peers}}) ->
     case Tag of 
-	downloaded     -> Dynamics = {Value, Left};
-        left           -> Dynamics = {Downloaded, Value};
+	downloaded     -> Dynamics = {Value, Left, Max_peers};
+        left           -> Dynamics = {Downloaded, Value, Max_peers};
+	max_peers      -> Dynamics = {Downloaded, Left, Value};
         torrent_status -> notify_trackers(Dict, Value, Entries),
-			  Dynamics = {Downloaded, Left}
+			  Dynamics = {Downloaded, Left, Max_peers}
     end,
     {noreply, {Id, Dict, Entries, Dynamics}}.
 
@@ -43,12 +47,11 @@ handle_call(get_dynamics, _From, {Id, Dict, Entries, Dynamics}) ->
 %% Entries = number of entries
 %% Id = torrent id
 
-spawn_trackers([], Dict, Entries, _Id) ->
-    {Dict, Entries};
+spawn_trackers([], Dict Entries, Id) ->
+    gen_server:cast(Id, {trackerinfo, {Dict, Entries}});
 spawn_trackers([H|T], Dict, Entries, Id) -> 
-    %%THIS FAR
-    {_, Pid} = dynamic_supervisor:start_child(tracker, H),
-    Result = gen_server:call(Pid, info_to_send(H,"started")),
+    {_, Pid} = dynamic_supervisor:start_tracker(H),
+    Result = gen_server:call(Pid, info_to_send(Id,"started")),
     [Seeders,Leechers,Interval,Peers] = Result,
     NewH = H#tracker_info{interval=Interval},
     gen_server:cast(msg_controller, {notify, seeders, {Id, Seeders}}),
@@ -74,17 +77,15 @@ interval_loop(TorrentId, Tracker, Pid, Event) ->
 	    {Downloaded, Left} = gen_server:call(TorrentId, get_dynamics),
 	    interval_loop(TorrentId, Tracker#tracker_info{downloaded=Downloaded, left=Left}, Pid, "")
     after Tracker#tracker_info.interval ->
-	    gen_server:call(Pid, info_to_send(Tracker,Event))
+	    gen_server:call(Pid, info_to_send(TorrentId, Event))
     end,
     interval_loop(TorrentId, Tracker, Pid, Event).
 
 %% Assembles the information to send to said tracker.
 
-info_to_send(Tracker, Event) ->
-    {tracker_request_info, 
-     {Tracker#torrent.downloaded, 
-     (Tracker#torrent.size-Tracker#torrent.downloaded),
-     Event, Tracker#torrent.max_peers}}.
+info_to_send(TorrentId, Event) ->
+    {Downloaded, Left, Max_peers} = gen_server:call(TorrentId, get_dynamics),
+    {tracker_request_info, {Downloaded, Left, Event, Max_peers}}.
 
 %% Sends from torrent id to interval loop of each tracker. 
 

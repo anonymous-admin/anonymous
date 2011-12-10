@@ -17,7 +17,7 @@ init(_Args)->
 
 handle_cast({notify, torrent_filepath, {_Id, Filepath}}, _Data)->
     Record = create_record(Filepath),
-%    dynamic_supervisor:start_child(torrent, Record), % Start the torrent process so it gets the torrent_info message.
+    dynamic_supervisor:start_torrent(Record), % Start the torrent process so it gets the torrent_info message.
     gen_server:cast(msg_controller, {notify, torrent_info, {Record#torrent.id, Record}}),
     {noreply,_Data}.
 
@@ -39,6 +39,7 @@ create_record(FileName) ->
     Piece_length = get_piece_length(Parsed_info),
     Number_of_pieces = get_number_of_pieces(Parsed_info),
     File_length = get_file_length(Parsed_info),
+    io:format("1 File_length: ~p~n", [File_length]),
     Pieces = get_pieces(Parsed_info),
     Bitfield = get_bitfield(Parsed_info),
     TrackerInfo = tracker_info_record(Announce, Info_hash_tracker, File_length),
@@ -54,6 +55,7 @@ create_record(FileName) ->
 tracker_info_record([], _, _)->
     [];
 tracker_info_record([H|T], Info_hash, File_length)->
+    io:format("2 File_length: ~p~n", [File_length]),
     [#tracker_info{url = H,
 	 info_hash = Info_hash, peer_id = "-AZ4004-znmphhbrij37",
 	 port = 6881, uploaded = 0, downloaded = 0, left = File_length, 

@@ -17,7 +17,7 @@ init(_Args)->
 
 handle_cast({notify, torrent_filepath, {_Id, Filepath}}, _Data)->
     Record = create_record(Filepath),
-%    dynamic_supervisor:start_child(torrent, Record), % Start the torrent process so it gets the torrent_info message.
+    dynamic_supervisor:start_torrent(Record), % Start the torrent process so it gets the torrent_info message.
     gen_server:cast(msg_controller, {notify, torrent_info, {Record#torrent.id, Record}}),
     {noreply,_Data}.
 
