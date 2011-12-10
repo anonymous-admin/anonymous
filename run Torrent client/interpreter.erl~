@@ -39,7 +39,6 @@ create_record(FileName) ->
     Piece_length = get_piece_length(Parsed_info),
     Number_of_pieces = get_number_of_pieces(Parsed_info),
     File_length = get_file_length(Parsed_info),
-    io:format("1 File_length: ~p~n", [File_length]),
     Pieces = get_pieces(Parsed_info),
     Bitfield = get_bitfield(Parsed_info),
     TrackerInfo = tracker_info_record(Announce, Info_hash_tracker, File_length),
@@ -49,17 +48,16 @@ create_record(FileName) ->
 	     filename = Filename, piece_length = Piece_length, 
 	     number_of_pieces = Number_of_pieces,file_length = File_length, 
 	     pieces = Pieces, bitfield = Bitfield, trackers = TrackerInfo, 
-	     downloaded = 0, max_peers = 50 }.
+	     downloaded = "0", max_peers = "50", size = integer_to_list(File_length), left = integer_to_list(File_length) }.
 
 
 tracker_info_record([], _, _)->
     [];
 tracker_info_record([H|T], Info_hash, File_length)->
-    io:format("2 File_length: ~p~n", [File_length]),
     [#tracker_info{url = H,
 	 info_hash = Info_hash, peer_id = "-AZ4004-znmphhbrij37",
-	 port = 6881, uploaded = 0, downloaded = 0, left = File_length, 
-	 event = started, num_want = 50, interval = 1000}|tracker_info_record(T, Info_hash, File_length)].
+	 port = "6881", uploaded = "0", downloaded = "0", left = integer_to_list(File_length), 
+	 event = started, num_want = "50", interval = "1000"}|tracker_info_record(T, Info_hash, File_length)].
     
 
 read_file(FileName) ->
@@ -221,7 +219,6 @@ create_bitfield_binary(0) ->
 create_bitfield_binary(NumberOfPieces) ->
   LeaderLength = (8 - NumberOfPieces rem 8) rem 8,
   create_bitfield_binary(<<>>, LeaderLength, NumberOfPieces).
-
 create_bitfield_binary(Binary, 0, 0) ->
     Binary;
 create_bitfield_binary(Binary, 0, NumberOfPieces) ->

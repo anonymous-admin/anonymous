@@ -2,7 +2,7 @@
 
 -module(dynamic_supervisor).
 -behaviour(supervisor).
--export([start_link/0, init/1, start_torrent/1, start_tracker/1]). 
+-export([start_link/0, init/1, start_torrent/1, start_tracker/2]). 
 -include("defs.hrl").
 
 start_link() ->
@@ -11,9 +11,9 @@ start_link() ->
 init(_Args) ->
     {ok,{{one_for_one,3,1}, []}}.
 
-start_tracker(Tracker) ->
+start_tracker(Tracker, TorrentId) ->
     Id = list_to_atom(Tracker#tracker_info.url),
-    TrackerChild = {Id, {tracker_interactor, start_link, [[Tracker]]},
+    TrackerChild = {Id, {tracker_interactor, start_link, [[Tracker, 3000, TorrentId]]},
 			 transient, 2000, worker, [tracker_interactor]},
     supervisor:start_child(dynamic_supervisor, TrackerChild).
 

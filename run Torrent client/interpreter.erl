@@ -48,7 +48,7 @@ create_record(FileName) ->
 	     filename = Filename, piece_length = Piece_length, 
 	     number_of_pieces = Number_of_pieces,file_length = File_length, 
 	     pieces = Pieces, bitfield = Bitfield, trackers = TrackerInfo, 
-	     downloaded = 0, max_peers = 50 }.
+	     downloaded = "0", max_peers = "50", size = integer_to_list(File_length), left = integer_to_list(File_length) }.
 
 
 tracker_info_record([], _, _)->
@@ -56,8 +56,8 @@ tracker_info_record([], _, _)->
 tracker_info_record([H|T], Info_hash, File_length)->
     [#tracker_info{url = H,
 	 info_hash = Info_hash, peer_id = "-AZ4004-znmphhbrij37",
-	 port = 6881, uploaded = 0, downloaded = 0, left = File_length, 
-	 event = started, num_want = 50, interval = 1000}|tracker_info_record(T, Info_hash, File_length)].
+	 port = "6881", uploaded = "0", downloaded = "0", left = integer_to_list(File_length), 
+	 event = started, num_want = "50", interval = "1000"}|tracker_info_record(T, Info_hash, File_length)].
     
 
 read_file(FileName) ->
@@ -117,8 +117,16 @@ get_encoding({info, Info}) ->
     end.
 
 get_files({info, Info}) ->
-    {list, Files_dict} = get_info_dec(<<"files">>, Info),
-    files_interpreter(Files_dict).
+    Info_dec_keys = get_info_dec_keys(Info),
+    case lists:member(<<"files">>, Info_dec_keys) of
+	true ->
+     {list, Files_dict} = get_info_dec(<<"files">>, Info),
+     files_interpreter(Files_dict);
+	false ->
+     Path = get_info_dec(<<"name">>, Info),
+     Length = get_info_dec(<<"length">>, Info),
+     [[Path],Length]
+    end.
 
 get_filename({info, Info}) ->
     Name = get_info_dec(<<"name">>, Info),
@@ -213,6 +221,10 @@ to_string([H|T]) ->
 get_info_dec(Name, Info) ->
     {dict,{dict, Info_dec}} = {dict, dict:fetch(<<"info">>, Info)},
     dict:fetch(Name, Info_dec).
+
+get_info_dec_keys(Info) ->
+    {dict,{dict, Info_dec}} = {dict, dict:fetch(<<"info">>, Info)},
+     dict:fetch_keys(Info_dec).
 
 create_bitfield_binary(0) ->
     <<>>;
