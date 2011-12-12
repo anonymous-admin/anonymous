@@ -154,8 +154,9 @@ get_tracker_response_info({{dict,Response},_}) ->
     Interval = dict:fetch(<<"interval">>,Response),
     Seeds = dict:fetch(<<"complete">>,Response),
     Leechers = dict:fetch(<<"incomplete">>,Response),
-    {list,Peers_dict} = dict:fetch(<<"peers">>,Response),
-    [Interval,Seeds,Leechers,peers_interpreter(Peers_dict)].
+    PeersList = dict:fetch(<<"peers">>,Response),
+%    {list,Peers_dict} = dict:fetch(<<"peers">>,Response),
+    [Interval,Seeds,Leechers,peers_compact(PeersList)].
     
 peers_interpreter([]) ->
     [];
@@ -165,6 +166,13 @@ peers_interpreter([H|T]) ->
     Peer_id = dict:fetch(<<"peer id">>, Info),
     Port = dict:fetch(<<"port">>, Info),
     [[IP,Port,Peer_id]|peers_interpreter(T)].
+
+peers_compact([])->
+    [];
+peers_compact([M1,M2,M3,M4,M5,M6|T]) ->
+    IP = [M1,46,M2,46,M3,46,M4],
+    <<Port:16>> = list_to_binary([M5,M6]), 
+    [[IP,Port]|peers_compact(T)].
 
 files_interpreter([]) ->    
     [];
