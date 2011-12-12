@@ -6,17 +6,17 @@
 -behaviour(gen_server).
 -include("defs.hrl").
 
-init(Data)->
-    handshake(Data),
-    {ok,Data}.
+init([Torrent, Ip, Port])->
+    gen_server:cast(Torrent#torrent.id, {peer_spawned, list_to_atom(Ip)}),
+    gen_server:cast(msg_controller, {subscribe, list_to_atom(Ip), [{available_pieces, Torrent#torrent.id}, {get_blocks, Torrent#torrent.id}]}),
+    handshake([Torrent, Ip, Port]),
+    {ok,[Torrent, Ip, Port]}.
 
 terminate(_Reason,Data)->
     ok.
 
-%%Data = [Trakcer-info record,[Peer-info]]
-start_link([Tracker,Peer])->
-    gen_server:start_link({local,list_to_atom(list:nth(3,Peer))},?MODULE,[Tracker,Peer],[]).
-%%M = [19,"bittorrent protocol",<<0.0.0.0.0.0.0.0 /binary>>,"%16%71%26%41%9E%F1%84%B4%EC%8F%B3%CA%46%5A%B7%FE%D1%97%51%9A","edocIT00855481937666"],
+start_link([Torrent, Ip, Port])->
+    gen_server:start_link({local,list_to_atom(Ip)},?MODULE,[[Torrent, Ip, Port]],[]).
 
 handle_call(Request,_From,Data) ->
     {reply,null,Data}.
@@ -24,12 +24,12 @@ handle_call(Request,_From,Data) ->
 handle_cast(Request,Data)->
     {noreply,Data}.
 
-handshake([Ip,Port,Peer_ID])->
+handshake([Torrent, Ip, Port])->
     io:format("connecting to ip: ~p~n in port : ~p~n",[Ip,Port]),
     %%----------------------------------HARD CODED--------------------------
     Msg = list_to_binary([<<19>>,<<"BitTorrent protocol">>,
 			  <<0,0,0,0,0,0,0,0>>,
-			  <<22,113,38,65,158,241,132,180,236,143,179,202,70,90,183,254,209,151,81,154>>,
+			  Torrent#torrent.id,
 			  list_to_binary("-AZ4004-znmphhbrij37")]),
     Connection =  gen_tcp:connect(Ip,Port,[list,{active,true},{packet,0}]),
     case Connection of

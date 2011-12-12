@@ -12,7 +12,7 @@ init([Id, Torrent_info]) ->
 						     {left, Id}]}),
     Dict = dict:new(),
     Dynamics = {Torrent_info#torrent.downloaded, Torrent_info#torrent.left, "started", Torrent_info#torrent.max_peers},
-    spawn(fun() -> spawn_trackers(Torrent_info#torrent.trackers, Dict, 1, Id) end),
+    spawn(fun() -> spawn_trackers(Torrent_info#torrent.trackers, Dict, 1, Torrent_info) end),
     {ok, {Id, Dict, 0, Dynamics}}.
 
 terminate(_Reason, {_Id, _Dict, _Entries, _Dynamics}) ->
@@ -52,12 +52,12 @@ handle_call(get_dynamics, _From, {Id, Dict, Entries, Dynamics}) ->
 %% Entries = number of entries
 %% Id = torrent id
 
-spawn_trackers([], Dict, Entries, Id) ->
-    gen_server:cast(Id, {trackerinfo, {Dict, Entries}});
-spawn_trackers([H|T], Dict, Entries, Id) -> 
-    {_, Pid} = dynamic_supervisor:start_tracker(H, Id),
+spawn_trackers([], Dict, Entries, Torrent_info) ->
+    gen_server:cast(Torrent_info#torrent.id, {trackerinfo, {Dict, Entries}});
+spawn_trackers([H|T], Dict, Entries, Torrent_info) -> 
+    {_, Pid} = dynamic_supervisor:start_tracker(H, Torrent_info),
     NewDict = dict:store(Entries, {Pid, H}, Dict),
-    spawn_trackers(T, NewDict, Entries+1, Id).
+    spawn_trackers(T, NewDict, Entries+1, Torrent_info).
 
 handle_info(_, _) ->
     ok.

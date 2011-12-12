@@ -19,7 +19,7 @@ stop() ->
     gen_server:cast(gui, stop).
 
 init(NodeAtom) ->
-    timer:sleep(3000),
+    timer:sleep(4000),
     {mailbox, NodeAtom} ! {self(), "startconnection"},
     gen_server:cast(msg_controller, {subscribe, gui, [{exit,-1}, {torrent_info,-1}, {torrent_status,-1}, 
                                                       {tracker_info,-1}, {seeders,-1}, {leechers,-1}, 
@@ -34,52 +34,55 @@ terminate(_Reason, _NodeAtom) ->
 handle_cast(stop, _NodeAtom) ->
     {stop, normal, _NodeAtom};
 
-handle_cast(Request, NodeAtom) ->
+handle_cast({notify, Tag, {Id, Value}}, NodeAtom) ->
+    TorrentId = atom_to_list(Id),
+    Target = {mailbox2, NodeAtom},
     
         %%receives from other erlang modules sends back to notice java
-    case Request of
-    	{notify, torrent_info, {TorrentId, Value}} ->
-	    %Seeders = integer_to_list(Value#torrent.seeders),
-	    %Leechers = integer_to_list(Value#torrent.leechers),
-	    Size = integer_to_list(Value#torrent.size),
-	    Downloaded = integer_to_list(Value#torrent.downloaded),
+    case Tag of
+    	torrent_info ->
+	    %Seeders = Value#torrent.seeders,
+	    %Leechers = Value#torrent.leechers,
+	    Size = Value#torrent.size,
+	    Downloaded = Value#torrent.downloaded,
 	    Files = Value#torrent.files,
 	    %{mailbox2, NodeAtom} ! {self(), TorrentId, 5, Seeders},
 	    %{mailbox2, NodeAtom} ! {self(), TorrentId, 6, Leechers},
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 1, Size},
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 7, Downloaded},
+	    Target ! {self(), TorrentId, 1, Size},
+	    Target ! {self(), TorrentId, 7, Downloaded},
 	    sendFiles(Files, NodeAtom, TorrentId);
 
-	{notify, tracker_info, {TorrentId, Value}} ->
-	    Uploaded = integer_to_list(Value#tracker_info.uploaded),
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 8, Uploaded};
+	tracker_info ->
+	    Uploaded = Value#tracker_info.uploaded,
+	    Target ! {self(), TorrentId, 8, Uploaded};
 
-	{notify, file_path, {TorrentId, Value}} ->
-	    Files = integer_to_list(Value#torrent.files),
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 13, Files};
+	file_path ->
+	    Files = Value#torrent.files,
+	    Target ! {self(), TorrentId, 13, Files};
 
-	{notify, torrent_status, {TorrentId, Value}} ->
+	torrent_status ->
 	    case Value of
 		finished -> {mailbox2, NodeAtom} ! {self(), TorrentId, 14, Value};
 	        _ -> ok
 	    end;
 
-	{notify, torrent_size, {TorrentId, Value}} ->
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 1, Value};
-	{notify, download_speed, {TorrentId, Value}} ->
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 3, Value};
-	{notify, upload_speed, {TorrentId, Value}} ->
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 4, Value};
-	{notify, seeders, {TorrentId, Value}} ->
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 5, Value};
-	{notify, leechers, {TorrentId, Value}} ->
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 6, Value};
-	{notify, downloaded, {TorrentId, Value}} ->
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 7, Value};
-	{notify, uploaded, {TorrentId, Value}} ->
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 8, Value};
-	{notify, finished, {TorrentId, _Value}} ->
-	    {mailbox2, NodeAtom} ! {self(), TorrentId, 9, "Torrent finished downloading"}
+	torrent_size ->
+	    Target ! {self(), TorrentId, 1, Value};
+	download_speed ->
+	    Target ! {self(), TorrentId, 3, Value};
+	upload_speed ->
+	    Target ! {self(), TorrentId, 4, Value};
+	seeders ->
+	    io:format("gui got seeders: ~p~n", [Value]),
+	    Target ! {self(), TorrentId, 5, Value};
+	leechers ->
+	    Target ! {self(), TorrentId, 6, Value};
+	downloaded ->
+	    Target ! {self(), TorrentId, 7, Value};
+	uploaded ->
+	    Target ! {self(), TorrentId, 8, Value};
+	finished ->
+	    Target ! {self(), TorrentId, 9, "Torrent finished downloading"}
     end,
     {noreply, NodeAtom}.
 

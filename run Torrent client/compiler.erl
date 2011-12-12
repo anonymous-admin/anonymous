@@ -20,4 +20,6 @@ compile_all() ->
     compile:file(intermediate),
     compile:file(writer),
     compile:file(tracker_interactor),
-    compile:file(talkToJava).
+    compile:file(talkToJava),
+    compile:file(peers_interactor),
+    compile:file(peer_message_handler).

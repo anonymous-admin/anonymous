@@ -19,4 +19,5 @@ compile_all() ->
     compile:file(file_handler),
     compile:file(intermediate),
     compile:file(writer),
-    compile:file(tracker_interactor).
+    compile:file(tracker_interactor),
+    compile:file(talkToJava).

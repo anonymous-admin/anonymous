@@ -42,7 +42,7 @@ create_record(FileName) ->
     Pieces = get_pieces(Parsed_info),
     Bitfield = get_bitfield(Parsed_info),
     TrackerInfo = tracker_info_record(Announce, Info_hash_tracker, File_length),
-    #torrent{id = Info_hash_handshake, info_hash_tracker = Info_hash_tracker, 
+    #torrent{id = list_to_atom(binary_to_list(Info_hash_handshake)), info_hash_tracker = Info_hash_tracker, 
 	     announce = Announce, creation_date = Creation_date, comment = Comment, 
 	     created_by = Created_by, encoding = Encoding, files = Files,
 	     filename = Filename, piece_length = Piece_length, 
@@ -117,8 +117,16 @@ get_encoding({info, Info}) ->
     end.
 
 get_files({info, Info}) ->
-    {list, Files_dict} = get_info_dec(<<"files">>, Info),
-    files_interpreter(Files_dict).
+    Info_dec_keys = get_info_dec_keys(Info),
+    case lists:member(<<"files">>, Info_dec_keys) of
+	true ->
+     {list, Files_dict} = get_info_dec(<<"files">>, Info),
+     files_interpreter(Files_dict);
+	false ->
+     Path = get_info_dec(<<"name">>, Info),
+     Length = get_info_dec(<<"length">>, Info),
+     [[Path],Length]
+    end.
 
 get_filename({info, Info}) ->
     Name = get_info_dec(<<"name">>, Info),
@@ -146,8 +154,10 @@ get_tracker_response_info({{dict,Response},_}) ->
     Interval = dict:fetch(<<"interval">>,Response),
     Seeds = dict:fetch(<<"complete">>,Response),
     Leechers = dict:fetch(<<"incomplete">>,Response),
-    {list,Peers_dict} = dict:fetch(<<"peers">>,Response),
-    [Interval,Seeds,Leechers,peers_interpreter(Peers_dict)].
+    PeersList = dict:fetch(<<"peers">>,Response),
+    io:format("PEERS: ~p~n", [PeersList]),
+%    {list,Peers_dict} = dict:fetch(<<"peers">>,Response),
+    [Interval,Seeds,Leechers,peers_compact(binary_to_list(PeersList))].
     
 peers_interpreter([]) ->
     [];
@@ -157,6 +167,13 @@ peers_interpreter([H|T]) ->
     Peer_id = dict:fetch(<<"peer id">>, Info),
     Port = dict:fetch(<<"port">>, Info),
     [[IP,Port,Peer_id]|peers_interpreter(T)].
+
+peers_compact([])->
+    [];
+peers_compact([M1,M2,M3,M4,M5,M6|T]) ->
+    IP = [M1,46,M2,46,M3,46,M4],
+    <<Port:16>> = list_to_binary([M5,M6]), 
+    [[IP,Port]|peers_compact(T)].
 
 files_interpreter([]) ->    
     [];
@@ -213,6 +230,10 @@ to_string([H|T]) ->
 get_info_dec(Name, Info) ->
     {dict,{dict, Info_dec}} = {dict, dict:fetch(<<"info">>, Info)},
     dict:fetch(Name, Info_dec).
+
+get_info_dec_keys(Info) ->
+    {dict,{dict, Info_dec}} = {dict, dict:fetch(<<"info">>, Info)},
+     dict:fetch_keys(Info_dec).
 
 create_bitfield_binary(0) ->
     <<>>;

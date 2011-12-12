@@ -42,7 +42,7 @@ create_record(FileName) ->
     Pieces = get_pieces(Parsed_info),
     Bitfield = get_bitfield(Parsed_info),
     TrackerInfo = tracker_info_record(Announce, Info_hash_tracker, File_length),
-    #torrent{id = Info_hash_handshake, info_hash_tracker = Info_hash_tracker, 
+    #torrent{id = list_to_atom(binary_to_list(Info_hash_handshake)), info_hash_tracker = Info_hash_tracker, 
 	     announce = Announce, creation_date = Creation_date, comment = Comment, 
 	     created_by = Created_by, encoding = Encoding, files = Files,
 	     filename = Filename, piece_length = Piece_length, 
@@ -156,7 +156,7 @@ get_tracker_response_info({{dict,Response},_}) ->
     Leechers = dict:fetch(<<"incomplete">>,Response),
     PeersList = dict:fetch(<<"peers">>,Response),
 %    {list,Peers_dict} = dict:fetch(<<"peers">>,Response),
-    [Interval,Seeds,Leechers,peers_compact(PeersList)].
+    [Interval,Seeds,Leechers,peers_compact(binary_to_list(PeersList))].
     
 peers_interpreter([]) ->
     [];

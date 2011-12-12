@@ -8,31 +8,31 @@
 -include("defs.hrl").
 
 
-init([Tracker, Timeout, TorrentId])->
+init([Tracker, Timeout, Torrent])->
     URL = make_url(Tracker#tracker_info{event="started"}),
     io:format("Tracker started: ~p~n", [URL]),
     {Data, NewTimeout} = case send_request(URL) of
 	{ok,Result} ->
+	    io:format("in case~n"),
 	    [Seeders,Leechers,Interval,Peers] = response_handler(Result),
 	    NewTracker = Tracker#tracker_info{interval=integer_to_list(Interval),event=""},
-	    %%SEND BACK INFO TO TORRENT
-	    io:format("FIRST Seeders: ~p~n Leechers: ~p~n Interval: ~p~n Peers: ~p~n",
-		      [Seeders, Leechers, Interval, Peers]),
-	    {{NewTracker, TorrentId},Interval};
+	    gen_server:cast(msg_controller, {notify, seeders, {Torrent#torrent.id, integer_to_list(Seeders)}}),
+	    {{NewTracker, Torrent},Interval};
 	{error,_Reason} ->
 	    io:format("Request error"),
 	    %%gen_server:cast(msg_controller,{tracker_request_error,Reason})
 	    terminate([], []),
-	    {{Tracker, TorrentId},Timeout};
+	    {{Tracker, Torrent},Timeout};
 	Last -> io:format("Bad clause: ~p~n", [Last])	
     end,
+    io:format("tracker init done"),
     {ok, Data, NewTimeout}.
 
-terminate(_Reason,_Tracker)->
+terminate(_Reason,_Data)->
     gen_server:cast(self(), stop).
 
-start_link([Tracker, Timeout, TorrentId])->
-    gen_server:start_link(?MODULE,[Tracker, Timeout, TorrentId],[{debug, [trace]}]).
+start_link([Tracker, Timeout, Torrent])->
+    gen_server:start_link(?MODULE,[Tracker, Timeout, Torrent],[{debug, [trace]}]).
 
 send_request(URL)->
     inets:start(),
@@ -45,41 +45,40 @@ make_url(T)->
 
 response_handler(Result)->
     {_Status_line, _Headers, Body} = Result,
-    io:format("BODY: ~p~n", [Body]),
     Decoded_Body = parser:decode(list_to_binary(Body)),
-    io:format("Decoded BODY: ~p~n", [Decoded_Body]),
     [Interval,Seeds,Leechers,Peers]=interpreter:get_tracker_response_info(Decoded_Body),
+    io:format("after response info~n"),
     %%io:format("seeds:~p  leechers:~p  interval :~p\n",[S,L,NewInterval]),
     [Seeds,Leechers,Interval,Peers].
 
 handle_cast(stop, _Data)->
     {stop, normal, _Data};
 
-handle_cast(tracker_request_info,{Tracker, TorrentId})->
+handle_cast(tracker_request_info,{Tracker, Torrent})->
     URL = make_url(Tracker),
     io:format("The url is ~p~n", [URL]),
     {Data, Timeout} = case send_request(URL) of
 	{ok,Result} ->
 	    [Seeders,Leechers,Interval,Peers] = response_handler(Result),
+	    spawn_peers(Peers, Torrent),
 	    NewTracker = Tracker#tracker_info{interval=integer_to_list(Interval)},
-	    io:format("Seeders: ~p~n Leechers: ~p~n Interval: ~p~n Peers: ~p~n",
-		      [Seeders, Leechers, Interval, Peers]),
 	    %SEND BACK INFO TO TORRENT
-	    {{NewTracker,TorrentId},Interval};
+	    gen_server:cast(msg_controller, {notify, seeders, {Torrent#torrent.id, integer_to_list(Seeders)}}),
+	    {{NewTracker,Torrent},Interval};
 	{error,_Reason} ->
 	    %%gen_server:cast(msg_controller,{tracker_request_error,Reason})
 	    io:format("Request Error"),
 	    gen_server:cast(self(), stop),
-	    {{Tracker,TorrentId},list_to_integer(Tracker#tracker_info.interval)}
+	    {{Tracker,Torrent},list_to_integer(Tracker#tracker_info.interval)}
     end,
     {noreply, Data, Timeout}.
 
-handle_info(timeout, {Tracker, TorrentId}) ->
+handle_info(timeout, {Tracker, Torrent}) ->
     io:format("Interval"),
-    {Downloaded, Left, Event, Max_peers} = gen_server:call(TorrentId, get_dynamics),
+    {Downloaded, Left, Event, Max_peers} = gen_server:call(Torrent#torrent.id, get_dynamics),
     NewTracker = Tracker#tracker_info{downloaded=Downloaded, left=Left, event=Event, num_want=Max_peers},
     gen_server:cast(self(), tracker_request_info),
-    {noreply, {NewTracker,TorrentId},NewTracker#tracker_info.interval}.
+    {noreply, {NewTracker,Torrent},NewTracker#tracker_info.interval}.
     
 
 create_record() ->
@@ -88,6 +87,14 @@ create_record() ->
 		      peer_id = "edocIT00855481937666",
 		      port = "6881"},
     T.
+
+spawn_peers([], _) ->
+    ok;
+spawn_peers([H|T], Torrent) ->
+    io:format("spawning peers"),
+    [Ip,Port] = H,
+    dynamic_supervisor:start_peer(Torrent, Ip, Port),
+    spawn_peers(T, Torrent).
 
 handle_call(_,_,_) ->
     ok.
