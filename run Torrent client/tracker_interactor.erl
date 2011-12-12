@@ -23,7 +23,8 @@ init([Tracker, Timeout, TorrentId])->
 	    io:format("Request error"),
 	    %%gen_server:cast(msg_controller,{tracker_request_error,Reason})
 	    terminate([], []),
-	    {{Tracker, TorrentId},Timeout}
+	    {{Tracker, TorrentId},Timeout};
+	Last -> io:format("Bad clause: ~p~n", [Last])	
     end,
     {ok, Data, NewTimeout}.
 
@@ -39,12 +40,14 @@ send_request(URL)->
 
 make_url(T)->
     io:format("Creating URL: ~p~n", [T]),
-    T#tracker_info.url++"?info_hash="++T#tracker_info.info_hash++"&peer_id="++T#tracker_info.peer_id++"&port="++T#tracker_info.port++"&downloaded="++T#tracker_info.downloaded++"&left="++T#tracker_info.left++"&event="++T#tracker_info.event++"&numwant="++T#tracker_info.num_want++"&uploaded="++T#tracker_info.uploaded.
+    T#tracker_info.url++"?info_hash="++T#tracker_info.info_hash++"&peer_id="++T#tracker_info.peer_id++"&port="++T#tracker_info.port++"&downloaded="++T#tracker_info.downloaded++"&left="++T#tracker_info.left++"&event="++T#tracker_info.event++"&numwant="++T#tracker_info.num_want++"&uploaded="++T#tracker_info.uploaded++"&compact=1".
 
 
 response_handler(Result)->
     {_Status_line, _Headers, Body} = Result,
+    io:format("BODY: ~p~n", [Body]),
     Decoded_Body = parser:decode(list_to_binary(Body)),
+    io:format("Decoded BODY: ~p~n", [Decoded_Body]),
     [Interval,Seeds,Leechers,Peers]=interpreter:get_tracker_response_info(Decoded_Body),
     %%io:format("seeds:~p  leechers:~p  interval :~p\n",[S,L,NewInterval]),
     [Seeds,Leechers,Interval,Peers].
