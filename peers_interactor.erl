@@ -1,5 +1,5 @@
-%%Author:Massih
-%%Creation Date: 11-Nov-2011
+%%Author : Massih
+%%Creation Date : 8-Nov-2011 
 -module(peers_interactor).
 -export([init/1,start_link/1,terminate/2,handle_cast/2,handle_call/3]).
 -export([test/0,handshake/1]).
@@ -13,8 +13,9 @@ init(Data)->
 terminate(_Reason,Data)->
     ok.
 
-start_link(Data)->
-    gen_server:start_link(?MODULE,Data,[]).
+%%Data = [Trakcer-info record,[Peer-info]]
+start_link([Tracker,Peer])->
+    gen_server:start_link({local,list_to_atom(list:nth(3,Peer))},?MODULE,[Tracker,Peer],[]).
 %%M = [19,"bittorrent protocol",<<0.0.0.0.0.0.0.0 /binary>>,"%16%71%26%41%9E%F1%84%B4%EC%8F%B3%CA%46%5A%B7%FE%D1%97%51%9A","edocIT00855481937666"],
 
 handle_call(Request,_From,Data) ->
@@ -22,7 +23,6 @@ handle_call(Request,_From,Data) ->
 
 handle_cast(Request,Data)->
     {noreply,Data}.
-
 
 handshake([Ip,Port,Peer_ID])->
     io:format("connecting to ip: ~p~n in port : ~p~n",[Ip,Port]),
@@ -41,6 +41,7 @@ handshake([Ip,Port,Peer_ID])->
 	    put(peer_choking,1),
 	    put(peer_have_list,dict:new()),
 	    put(requested_piece,{-1,-1}),
+	    put(downloaded_piece,[]),
 	    PID = peer_message_handler:start(self()),
 	    gen_tcp:send(Socket,Msg),
 	    loop(Socket,-1,PID);
@@ -59,13 +60,14 @@ test()->
     {ok,Result} = httpc:request(URL),
     {_Status_line, _Headers, Body} = Result,
     Decoded_Body = parser:decode(list_to_binary(Body)),
-    [Interval,Seeds,Leechers,Peers]=torrent_interpreter:get_tracker_response_info(Decoded_Body),
+    [Interval,Seeds,Leechers,Peers]=interpreter:get_tracker_response_info(Decoded_Body),
    % spawn(fun()->handshake(hd(Peers))end),
    % spawn(fun()->handshake(lists:nth(2,Peers))end).
     [IP,PORT,_PID] = hd(Peers),
     %%io:format("connecting to ip: ~p~n ",[hd(Peers)]),
     %%lists:map(spawn(fun(P)->handshake(P)end),Peers).
     handshake([binary_to_list(IP),PORT,_PID]).
+
 
 
 loop(Socket,Remain,PID)->
@@ -110,10 +112,20 @@ loop(Socket,Remain,PID)->
 	    put(peer_have_list,Dict2),
 	    loop(Socket,Remain,PID);
 	{recieved_piece,Index,Begin,Block} ->
-	    io:format("*************Piece recieved index is :~p     begin is : ~p~n block length is :~p~n",[Index,Begin,length(Block)]),
+	    io:format("*************Piece recieved index is :~p     begin is : ~p~n block length is :~p~n",[Index,Begin,byte_size(Block)]),
+	    %% save blocks to send them when a piece downloaded completely
+	    %%%%%New_Blocks
+	    New_blocks = get(downloaded_piece) ++ [[Index,Begin,Block]],
+	    put(downloaded_piece,New_blocks),
 	    send_request(get(peer_have_list),Socket),
 	    %%Block_list = dict:fetch(Index,get(peer_have_list)),
-	    %%gen_server:cast(controller,{set_block,{Tid,[Pid,Index,Begin,Block]}})
+	    %%gen_server:cast(msg_controller,{notify,set_block,{Tid,[Pid,Index,Begin,Block]}})
+	    
+	    %%TEST
+	   %% file_handler ! {set_block,Index,Begin,list_to_binary(Block)},
+	    %%gen_server:cast(intermediate,{notify,set_block,[Index,Begin,list_to_binary(Block)] }),
+	    %%
+	    
 	    loop(Socket,Remain,PID);
 	_Other ->
 	    io:format("receive unknown message from a peer !!! ~n~w~n",[length(_Other)]),
@@ -146,10 +158,12 @@ send_interest(Socket)->
 send_request(Dict,Socket)->
     All_pieces = dict:fetch_keys(Dict),
     if 
-	length(All_pieces)>0 ->
+	length(All_pieces) > 0 ->
 	    case get(requested_piece) of
 		{-1,-1} ->
 		    I = hd(All_pieces),
+		    %%DONT FORGET TO CHECK FOR LAST PIECE*********************************
+		    %% HERE
 		    Block = 0,
 		    Request = <<0,0,0,13,6,I:32/integer-big,Block:32/integer-big,32768:32/integer-big>>,
 		    io:format("sending request for piece index : ~w~n",[Request]),
@@ -167,6 +181,9 @@ send_request(Dict,Socket)->
 			Next_block == 262144 ->  %%262144 is piece_length
 			    put(requested_piece,{-1,-1}),
 			    New_dict = dict:erase(I,Dict),
+			    io:format("send all blocks of a piece together : ~p~n",[length(get(downloaded_piece))]),
+			    gen_server:cast(intermediate,{notify,set_block,{1,get(downloaded_piece)} }),
+			    put(downloaded_piece,[]),
 			    put(peer_have_list,New_dict);
 			true ->
 			    put(requested_piece,{I,Next_block}) 
