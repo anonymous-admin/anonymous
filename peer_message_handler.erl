@@ -1,3 +1,4 @@
+%%Author : Massih
 -module(peer_message_handler).
 -export([start/1]).
 
@@ -97,9 +98,9 @@ check_messages(Msg,Buff,PID) ->
 	    Identifier = lists:nth(5,Msg),
 	    if
 		 Identifier == 7 ->
-		    Index = lists:sublist(Msg,6,4),
-		    Begin = lists:sublist(Msg,10,4),
-		    Block = lists:sublist(Msg,14,Length - 9),
+		    <<Index:32>> = list_to_binary(lists:sublist(Msg,6,4)),
+		    <<Begin:32>> = list_to_binary(lists:sublist(Msg,10,4)),
+		    Block = list_to_binary(lists:sublist(Msg,14,Length - 9)),
 		    PID ! {recieved_piece,Index,Begin,Block},
 		    if 
 			length(Msg) > Length+4 ->
@@ -116,7 +117,6 @@ check_messages(Msg,Buff,PID) ->
 
 %%check_length(Msg,Length)->
 %%    ok.
-
     
 		
 	    
