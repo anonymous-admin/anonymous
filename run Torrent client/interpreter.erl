@@ -170,7 +170,7 @@ peers_interpreter([H|T]) ->
 peers_compact([])->
     [];
 peers_compact([M1,M2,M3,M4,M5,M6|T]) ->
-    IP = [M1,46,M2,46,M3,46,M4],
+    IP = lists:concat([M1,'.',M2,'.',M3,'.',M4]),
     <<Port:16>> = list_to_binary([M5,M6]), 
     [[IP,Port]|peers_compact(T)].
 

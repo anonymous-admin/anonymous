@@ -16,7 +16,7 @@ terminate(_Reason,Data)->
     ok.
 
 start_link([Torrent, Ip, Port])->
-    gen_server:start_link({local,list_to_atom(Ip)},?MODULE,[[Torrent, Ip, Port]],[]).
+    gen_server:start_link({local,list_to_atom(Ip)},?MODULE,[Torrent, Ip, Port],[]).
 
 handle_call(Request,_From,Data) ->
     {reply,null,Data}.
@@ -29,7 +29,7 @@ handshake([Torrent, Ip, Port])->
     %%----------------------------------HARD CODED--------------------------
     Msg = list_to_binary([<<19>>,<<"BitTorrent protocol">>,
 			  <<0,0,0,0,0,0,0,0>>,
-			  Torrent#torrent.id,
+			  atom_to_list(Torrent#torrent.id),
 			  list_to_binary("-AZ4004-znmphhbrij37")]),
     Connection =  gen_tcp:connect(Ip,Port,[list,{active,true},{packet,0}]),
     case Connection of
@@ -42,6 +42,7 @@ handshake([Torrent, Ip, Port])->
 	    put(peer_have_list,dict:new()),
 	    put(requested_piece,{-1,-1}),
 	    put(downloaded_piece,[]),
+	    put(torrent,Torrent),
 	    PID = peer_message_handler:start(self()),
 	    gen_tcp:send(Socket,Msg),
 	    loop(Socket,-1,PID);
@@ -55,18 +56,16 @@ handshake([Torrent, Ip, Port])->
 
 
 test()->
-    URL = "http://torrent.fedoraproject.org:6969/announce?&info_hash=%16%71%26%41%9E%F1%84%B4%EC%8F%B3%CA%46%5A%B7%FE%D1%97%51%9A&peer_id=-AZ4004-znmphhbrij37&port=6881&downloaded=10&left=1588&event=started&numwant=12",
+    URL = "http://torrent.fedoraproject.org:6969/announce?&info_hash=%16%71%26%41%9E%F1%84%B4%EC%8F%B3%CA%46%5A%B7%FE%D1%97%51%9A&peer_id=-AZ4004-znmphhbrij37&port=6881&downloaded=10&left=1588&event=started&numwant=12&compact=1",
     inets:start(),
     {ok,Result} = httpc:request(URL),
     {_Status_line, _Headers, Body} = Result,
     Decoded_Body = parser:decode(list_to_binary(Body)),
     [Interval,Seeds,Leechers,Peers]=interpreter:get_tracker_response_info(Decoded_Body),
-   % spawn(fun()->handshake(hd(Peers))end),
-   % spawn(fun()->handshake(lists:nth(2,Peers))end).
-    [IP,PORT,_PID] = hd(Peers),
+    [IP,PORT] = hd(Peers).
     %%io:format("connecting to ip: ~p~n ",[hd(Peers)]),
     %%lists:map(spawn(fun(P)->handshake(P)end),Peers).
-    handshake([binary_to_list(IP),PORT,_PID]).
+    %%handshake([binary_to_list(IP),PORT,_PID]).
 
 
 
