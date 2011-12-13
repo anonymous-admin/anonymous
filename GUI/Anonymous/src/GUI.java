@@ -67,7 +67,7 @@ public class GUI {
     protected static JProgressBar progressBar;
     protected static TalkToErlang tte;
     static JFrame frame;
-    protected static int fileSize;
+    protected static long fileSize;
     protected static JInternalFrame internalFrame;
     protected static Container internalContainer;
     protected static JTextArea internalTextArea;
@@ -81,7 +81,7 @@ public class GUI {
     	frame = new JFrame("Anonymous");
         frame.setSize(1025, 573);
         frame.setPreferredSize(new Dimension(1025,573));
-        frame.setIconImage(new ImageIcon("img/titleimg.png").getImage());
+//        frame.setIconImage(new ImageIcon("resources/titleimg.png").getImage());
         fc2.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         tte = obj;
         setUpGui();
@@ -467,7 +467,7 @@ public class GUI {
 
              //TextFields for information about torrent(filename, size, tracker)       
              fileNameField = new JTextArea("File name:");
-             fileNameField.setFont(new Font("Aharoni", 0, 20));
+             fileNameField.setFont(new Font("Aharoni", 0, 15));
              fileNameField.setVisible(true);
              fileNameField.setBorder(null);
              fileNameField.setOpaque(false);
@@ -476,7 +476,7 @@ public class GUI {
              pane.add(fileNameField, 0);
              
              fileSizeField = new JTextArea("File size:");
-             fileSizeField.setFont(new Font("Aharoni", 0, 20));
+             fileSizeField.setFont(new Font("Aharoni", 0, 15));
              fileSizeField.setVisible(true);
              fileSizeField.setBorder(null);
              fileSizeField.setOpaque(false);
@@ -485,7 +485,7 @@ public class GUI {
              pane.add(fileSizeField, 0);
              
              trackerField = new JTextArea("Tracker:");
-             trackerField.setFont(new Font("Aharoni", 0, 20));
+             trackerField.setFont(new Font("Aharoni", 0, 15));
              trackerField.setVisible(true);
              trackerField.setBorder(null);
              trackerField.setOpaque(false);
@@ -494,7 +494,7 @@ public class GUI {
              pane.add(trackerField, 0);
              
              statusField = new JTextArea("Status:");
-             statusField.setFont(new Font("Aharoni", 0, 20));
+             statusField.setFont(new Font("Aharoni", 0, 15));
              statusField.setVisible(true);
              statusField.setBorder(null);
              statusField.setOpaque(false);
@@ -503,7 +503,7 @@ public class GUI {
              pane.add(statusField, 0);
              
              timeLeftField = new JTextArea("Time left:");
-             timeLeftField.setFont(new Font("Aharoni", 0, 20));
+             timeLeftField.setFont(new Font("Aharoni", 0, 15));
              timeLeftField.setVisible(true);
              timeLeftField.setBorder(null);
              timeLeftField.setOpaque(false);
@@ -513,7 +513,7 @@ public class GUI {
              
              //seeders,leechers,download & upload speeds
              downloadSpeedField = new JTextArea("Download speed:");
-             downloadSpeedField.setFont(new Font("Aharoni", 0, 20));
+             downloadSpeedField.setFont(new Font("Aharoni", 0, 15));
              downloadSpeedField.setVisible(true);
              downloadSpeedField.setBorder(null);
              downloadSpeedField.setOpaque(false);
@@ -522,7 +522,7 @@ public class GUI {
              pane.add(downloadSpeedField, 0);
              
              uploadSpeedField = new JTextArea("Upload speed:");
-             uploadSpeedField.setFont(new Font("Aharoni", 0, 20));
+             uploadSpeedField.setFont(new Font("Aharoni", 0, 15));
              uploadSpeedField.setVisible(true);
              uploadSpeedField.setBorder(null);
              uploadSpeedField.setOpaque(false);
@@ -531,7 +531,7 @@ public class GUI {
              pane.add(uploadSpeedField, 0);
              
              seedersField = new JTextArea("Seeders:");
-             seedersField.setFont(new Font("Aharoni", 0, 20));
+             seedersField.setFont(new Font("Aharoni", 0, 15));
              seedersField.setVisible(true);
              seedersField.setBorder(null);
              seedersField.setOpaque(false);
@@ -540,7 +540,7 @@ public class GUI {
              pane.add(seedersField, 0);
              
              leechersField = new JTextArea("Leechers:");
-             leechersField.setFont(new Font("Aharoni", 0, 20));
+             leechersField.setFont(new Font("Aharoni", 0, 15));
              leechersField.setVisible(true);
              leechersField.setBorder(null);
              leechersField.setOpaque(false);
@@ -549,7 +549,7 @@ public class GUI {
              pane.add(leechersField, 0);
              
              downloadedField = new JTextArea("Downloaded:");
-             downloadedField.setFont(new Font("Aharoni", 0, 20));
+             downloadedField.setFont(new Font("Aharoni", 0, 15));
              downloadedField.setVisible(true);
              downloadedField.setBorder(null);
              downloadedField.setOpaque(false);
@@ -558,7 +558,7 @@ public class GUI {
              pane.add(downloadedField, 0);
              
              uploadedField = new JTextArea("Uploaded:");
-             uploadedField.setFont(new Font("Aharoni", 0, 20));
+             uploadedField.setFont(new Font("Aharoni", 0, 15));
              uploadedField.setVisible(true);
              uploadedField.setBorder(null);
              uploadedField.setOpaque(false);
@@ -579,9 +579,12 @@ public class GUI {
     	}
     	public static void setField(String torrentId, int tag,String value) {
     		switch (tag) {
-    		case 1: if (fileSizeField != null) {
-    			fileSizeField.setText("File size: " + value + " Mb");
-    			fileSize = Integer.parseInt(value);
+    		case 1: 
+    			if (fileSizeField != null) {
+    				System.out.println(value);
+    				fileSize = Long.parseLong(value);
+    			fileSizeField.setText("File size: " + fileSize/1048576 + " Mb");
+    			
     		}
     		break;
     		case 2: if (trackerField != null) 
@@ -600,12 +603,12 @@ public class GUI {
     			leechersField.setText("Leechers: " + value);
     		break;
     		case 7: if (downloadedField != null) {
-    			downloadedField.setText("Downloaded: " +value + "Mb");
+    			downloadedField.setText("Downloaded: " +value + " Mb");
     			progressBar.setValue((int)(Integer.parseInt(value)/(double)fileSize*100));
     		}
     		break;
     		case 8: if (uploadedField != null)
-    			uploadedField.setText("Downloaded: " +value + "Mb");
+    			uploadedField.setText("Downloaded: " +value + " Mb");
     		break;
     		case 9: displayMenu(MenuState.MAIN, MenuState.START);
     				JOptionPane.showMessageDialog(frame,
