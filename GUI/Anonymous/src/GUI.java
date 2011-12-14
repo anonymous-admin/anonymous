@@ -9,6 +9,7 @@ import java.util.ArrayList;
 
 import javax.swing.*;
 
+import com.ericsson.otp.erlang.OtpErlangAtom;
 import com.ericsson.otp.erlang.OtpErlangDecodeException;
 import components.TorrentFilter;
 
@@ -62,7 +63,7 @@ public class GUI {
     protected static JTextArea uploadedField;
     protected static JTextArea defaultDirField;
     protected static JLabel openToStart;
-    final JFileChooser fc = new JFileChooser();
+    final static JFileChooser fc = new JFileChooser();
     final JFileChooser fc2 = new JFileChooser();
     protected static JProgressBar progressBar;
     protected static TalkToErlang tte;
@@ -71,7 +72,9 @@ public class GUI {
     protected static JInternalFrame internalFrame;
     protected static Container internalContainer;
     protected static JTextArea internalTextArea;
-    protected static ArrayList<String> files;
+    protected static ArrayList<Torrent> torrents;
+    protected static ArrayList<JButton> torrentButtons;
+    
 	
     public enum MenuState {
         MAIN, START, START2, START3
@@ -84,6 +87,8 @@ public class GUI {
 //        frame.setIconImage(new ImageIcon("resources/titleimg.png").getImage());
         fc2.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         tte = obj;
+        torrents = new ArrayList<Torrent>();
+        torrentButtons = new ArrayList<JButton>();
         setUpGui();
         
     }
@@ -186,16 +191,16 @@ public class GUI {
         frame.setLayout(new BorderLayout());
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.setResizable(false);
-        files = new ArrayList<String>();
+//        files = new ArrayList<String>();
 
         frame.addWindowListener(new WindowAdapter()
         {
               public void windowClosing(WindowEvent e)
               {
             	  try {
-					tte.sendMessage("exit");
+  					tte.sendMessage1("exit");
 					System.exit(0);
-				} catch (Exception e1) {
+   				} catch (Exception e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
@@ -245,11 +250,10 @@ public class GUI {
 //                	undisplayMenu();
                 	displayMenu(MenuState.START, MenuState.MAIN);
                 	path = fc.getSelectedFile().getAbsolutePath();
-                	fileNameField.setText("File name: " +fc.getSelectedFile().getName());
                 	System.out.println(path);
                 	try {
-                	tte.sendMessage2("open", path);
-                	statusField.setText("Status: " +"Active");
+                		tte.sendMessage("open", path);
+                		statusField.setText("Status: " +"Active");
             		} catch (Exception e1) {
             			// TODO Auto-generated catch block
             			e1.printStackTrace();
@@ -279,8 +283,8 @@ public class GUI {
                 	path = fc2.getSelectedFile().getAbsolutePath();
                 	System.out.println(path);
                 	try {
-                	tte.sendMessage2("dir", path);
-                	defaultDirField.setText(path);
+                		tte.sendMessage("dir", path);
+                    	defaultDirField.setText(path);
             		} catch (Exception e1) {
             			// TODO Auto-generated catch block
             			e1.printStackTrace();
@@ -336,7 +340,7 @@ public class GUI {
              startButton.addActionListener(new ActionListener() {
                  public void actionPerformed(ActionEvent e) {
      				try {
-     					tte.sendMessage("start");
+     					tte.sendAtomMessage(getActiveTorrent().getId(), "start");
      					startButton.setVisible(false);
      					pauseButton.setVisible(true);
      					stopButton.setVisible(true);
@@ -365,7 +369,7 @@ public class GUI {
      								pauseButton.setVisible(false);
      								stopButton.setVisible(false);
      								startButton.setVisible(true);
-     								tte.sendMessage("pause");
+     								tte.sendAtomMessage(getActiveTorrent().getId(), "pause");
      								statusField.setText("Status: " +"Paused");
      							} catch (Exception e1) {
      								// TODO Auto-generated catch block
@@ -390,7 +394,7 @@ public class GUI {
      								stopButton.setVisible(false);
      								pauseButton.setVisible(false);
      								startButton.setVisible(true);
-     								tte.sendMessage("stop");
+     								tte.sendAtomMessage(getActiveTorrent().getId(), "stop");
      								statusField.setText("Status: " +"Stopped");
      							} catch (Exception e1) {
      								// TODO Auto-generated catch block
@@ -425,8 +429,8 @@ public class GUI {
                 	 internalTextArea.setBackground(Color.orange);
                 	 internalContainer = internalFrame.getContentPane();
                 	 String text = "";
-                	 for (int i = 0; i < files.size(); i++) {
-                		 text += files.get(i) + "\n";
+                	 for (int i = 0; i < getActiveTorrent().getFiles().size(); i++) {
+                		 text += getActiveTorrent().getFiles().get(i) + "\n";
                 	 }
                 	 internalTextArea.setText(text);
                 	 internalContainer.add(internalTextArea);
@@ -455,8 +459,17 @@ public class GUI {
                  		System.out.println("canceled by user"); 
                  	} else {
      				try {
-     					displayMenu(MenuState.MAIN, MenuState.START);
-     					tte.sendMessage("delete");
+     					tte.sendAtomMessage(getActiveTorrent().getId(), "delete");
+     					Torrent torrent = getActiveTorrent();
+     					for (int i = 0; i < torrents.size(); i++) {
+     						if (torrent.getId().equals(torrents.get(i).getId())) {
+     							torrents.get(i).getTorrentButton().setVisible(false);
+     							torrents.set(i, null);
+     							torrents.remove(i);
+     						}
+     						else if(torrents.size() == i+1)
+     							torrents.get(i).getTorrentButton().setLocation((100*i+3), torrents.get(i).getTorrentButton().getY());
+     					}
      				} catch (Exception e1) {
      					// TODO Auto-generated catch block
      					e1.printStackTrace();
@@ -472,7 +485,7 @@ public class GUI {
              fileNameField.setBorder(null);
              fileNameField.setOpaque(false);
              fileNameField.setEditable(false);
-             fileNameField.setBounds(20, 120, 500, 50);
+             fileNameField.setBounds(20, 145, 500, 50);
              pane.add(fileNameField, 0);
              
              fileSizeField = new JTextArea("File size:");
@@ -481,7 +494,7 @@ public class GUI {
              fileSizeField.setBorder(null);
              fileSizeField.setOpaque(false);
              fileSizeField.setEditable(false);
-             fileSizeField.setBounds(20, 170, 400, 50);
+             fileSizeField.setBounds(20, 185, 400, 50);
              pane.add(fileSizeField, 0);
              
              trackerField = new JTextArea("Tracker:");
@@ -490,7 +503,7 @@ public class GUI {
              trackerField.setBorder(null);
              trackerField.setOpaque(false);
              trackerField.setEditable(false);
-             trackerField.setBounds(20, 220, 400, 50);
+             trackerField.setBounds(20, 225, 400, 50);
              pane.add(trackerField, 0);
              
              statusField = new JTextArea("Status:");
@@ -499,7 +512,7 @@ public class GUI {
              statusField.setBorder(null);
              statusField.setOpaque(false);
              statusField.setEditable(false);
-             statusField.setBounds(20, 270, 400, 50);
+             statusField.setBounds(20, 265, 400, 50);
              pane.add(statusField, 0);
              
              timeLeftField = new JTextArea("Time left:");
@@ -508,7 +521,7 @@ public class GUI {
              timeLeftField.setBorder(null);
              timeLeftField.setOpaque(false);
              timeLeftField.setEditable(false);
-             timeLeftField.setBounds(750, 120, 200, 50);
+             timeLeftField.setBounds(750, 145, 200, 50);
              pane.add(timeLeftField, 0);
              
              //seeders,leechers,download & upload speeds
@@ -554,7 +567,7 @@ public class GUI {
              downloadedField.setBorder(null);
              downloadedField.setOpaque(false);
              downloadedField.setEditable(false);
-             downloadedField.setBounds(750, 170, 200, 50);
+             downloadedField.setBounds(750, 185, 200, 50);
              pane.add(downloadedField, 0);
              
              uploadedField = new JTextArea("Uploaded:");
@@ -563,7 +576,7 @@ public class GUI {
              uploadedField.setBorder(null);
              uploadedField.setOpaque(false);
              uploadedField.setEditable(false);
-             uploadedField.setBounds(750, 220, 200, 50);
+             uploadedField.setBounds(750, 225, 200, 50);
              pane.add(uploadedField, 0);
              
              //Progress Bar
@@ -577,49 +590,125 @@ public class GUI {
              progressBar.setBounds(20, 450, 980, 50);
              pane.add(progressBar, 0);
     	}
-    	public static void setField(String torrentId, int tag,String value) {
+    	public static void setField(OtpErlangAtom torrentId, int tag, String value) {
+    		Torrent torrent = getTorrent(torrentId);
     		switch (tag) {
+    		case 0:
+    			System.out.println("FILENAME: " + value);
+    			torrent.setFileName(value);
+    			torrent.getTorrentButton().setText(value);
+    			torrent.getTorrentButton().setToolTipText("Display torrent: " + torrent.getFileName());
+    		break;
     		case 1: 
-    			if (fileSizeField != null) {
-    				System.out.println(value);
-    				fileSize = Long.parseLong(value);
-    			fileSizeField.setText("File size: " + fileSize/1048576 + " Mb");
-    			
-    		}
+    			torrent.setFileSize(Long.parseLong(value)); 			
     		break;
-    		case 2: if (trackerField != null) 
-    			trackerField.setText("Tracker: " + value);
+			case 2:
+				torrent.setTracker(value);
     		break;
-    		case 3: if (downloadSpeedField != null)
-    			downloadSpeedField.setText("Download speed: " + value +" Kb/s");
+    		case 3:
+    			torrent.setDownloadSpeed(Integer.parseInt(value));
     		break;
-    		case 4: if (uploadSpeedField != null)
-    			uploadSpeedField.setText("Upload speed: " + value +" Kb/s");
+    		case 4:
+    			torrent.setUploadSpeed(Integer.parseInt(value));
     		break;
-    		case 5: if (seedersField != null)
-    			seedersField.setText("Seeders: " + value);
+    		case 5:
+    			torrent.setSeeders(Integer.parseInt(value));
     		break;
-    		case 6: if (leechersField != null)
-    			leechersField.setText("Leechers: " + value);
+    		case 6:
+    			torrent.setLeechers(Integer.parseInt(value));
     		break;
-    		case 7: if (downloadedField != null) {
-    			downloadedField.setText("Downloaded: " +value + " Mb");
-    			progressBar.setValue((int)(Integer.parseInt(value)/(double)fileSize*100));
-    		}
+    		case 7:
+    			torrent.setDownloaded(Double.parseDouble(value));
+    			torrent.setPercentage((int)(Integer.parseInt(value)/(double)torrent.getFileSize()*100));
     		break;
-    		case 8: if (uploadedField != null)
-    			uploadedField.setText("Downloaded: " +value + " Mb");
+    		case 8:
+    			torrent.setUploaded(Double.parseDouble(value));
+        		break;
+    		case 9:
+    			torrent.setStatus(value);
     		break;
-    		case 9: displayMenu(MenuState.MAIN, MenuState.START);
-    				JOptionPane.showMessageDialog(frame,
-    				value);
-    		break;
-    		case 10: files.add(value);
+    		case 10: 
+    			ArrayList<String> files = torrent.getFiles();
+    			files.add(value);
+    			torrent.setFiles(files);
     		break;
     		}
+    		displayTorrent(getActiveTorrent());
     	}
 
-    
-    
-
+    	public static void displayTorrent(Torrent torrent) {
+    		if(fileSizeField != null)
+    			fileSizeField.setText("File size: " + torrent.getFileSize()/1048576 + " Mb");  
+    		if(trackerField != null)
+    			trackerField.setText("Tracker: " + torrent.getTracker());
+    		if(downloadSpeedField != null)
+    			downloadSpeedField.setText("Download speed: " + torrent.getDownloadSpeed() +" Kb/s");
+    		if (uploadSpeedField != null)
+    			uploadSpeedField.setText("Upload speed: " + torrent.getUploadSpeed() +" Kb/s");
+    		if (seedersField != null)
+    			seedersField.setText("Seeders: " + torrent.getSeeders());
+    		if (leechersField != null)
+    			leechersField.setText("Leechers: " + torrent.getLeechers());
+    		if (downloadedField != null)
+    			downloadedField.setText("Downloaded: " + torrent.getDownloaded() + " Mb");
+    		if (progressBar != null)
+    			progressBar.setValue(torrent.getPercentage());
+    		if (uploadedField != null)
+    			uploadedField.setText("Uploaded: " + torrent.getUploaded() + " Mb");
+    		if (statusField != null)
+    			statusField.setText("Status: " + torrent.getStatus());
+    		if (fileNameField != null)
+    			fileNameField.setText("Filename: " + torrent.getFileName());
+    	}
+    	
+    	private static Torrent getActiveTorrent() {
+    		Torrent torrent;
+    		for (int i = 0; i < torrents.size(); i++) {
+    			torrent = torrents.get(i);
+    			if(torrent.isActive)
+    				return torrent;
+    		}
+    		return null;
+    	}
+    	
+    	private static Torrent getTorrent(OtpErlangAtom id) {
+    		Torrent torrent;
+    		for (int i = 0; i < torrents.size(); i++) {
+    			torrent = torrents.get(i);
+    			if(id.equals(torrent.getId()))
+    				return torrent;
+    		}
+    		return addTorrent(id);
+    	}
+    	
+    	public static Torrent addTorrent(OtpErlangAtom id) {
+    		final Torrent newTorrent = new Torrent(id);
+    		torrents.add(newTorrent);
+    		newTorrent.setTorrentButton(newTorrent, torrents.size()-1);
+    		pane.add(newTorrent.getTorrentButton(),1);        
+    		
+            newTorrent.getTorrentButton().addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                	setActiveTorrent(newTorrent.getId());
+                	displayTorrent(newTorrent);
+                }
+            });
+            
+            setActiveTorrent(id);
+    		return newTorrent;
+    	}
+    	
+    	public static void setActiveTorrent(OtpErlangAtom otpErlangAtom) {
+    		for (int i = 0; i < torrents.size(); i++) {
+    			Torrent torrent = torrents.get(i);
+    			if (torrent.getId().equals(otpErlangAtom)) {
+    				torrent.setActive(true);
+    				torrent.getTorrentButton().setBackground(Color.ORANGE);
+    			}
+    			else {
+    				torrent.setActive(false);
+    				torrent.getTorrentButton().setBackground(Color.GRAY);
+    			}
+    		}
+    	}
 }

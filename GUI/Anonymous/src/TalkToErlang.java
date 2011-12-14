@@ -63,45 +63,86 @@ public class TalkToErlang extends Thread
 			myMsg = (OtpErlangTuple) myObject;
 	        from = (OtpErlangPid) myMsg.elementAt(0);
 	        torrentId =(OtpErlangString) myMsg.elementAt(1);
+	        System.out.println("JAVAID: " + torrentId);
 	        tag = (OtpErlangLong) myMsg.elementAt(2);
 	        value = (OtpErlangString) myMsg.elementAt(3);
 	        System.out.println(value.stringValue());
-	        GUI.setField(torrentId.stringValue(), tag.intValue(), value.stringValue());
+	        //GUI.setField(torrentId, tag.intValue(), value.stringValue());
 	        
 		}
 	}
 	
-	public void sendMessage(String name) throws Exception
+	public void sendMessage(String otpErlangAtom, String name) throws Exception
     {
+        OtpErlangAtom NameAtom = new OtpErlangAtom(name);
+        OtpErlangAtom IdAtom = new OtpErlangAtom(otpErlangAtom);
+        int counter = 1;
+        while(counter == 1) {
+
+                OtpErlangObject[] send = new OtpErlangObject[3];
+                send[0] = myMbox.self();
+                send[1] = IdAtom;
+                send[2] = NameAtom;
+                
+                OtpErlangTuple myTuple = new OtpErlangTuple(send);
+                System.out.println(myTuple);
+                myMbox.send(from, myTuple);
+                counter--;
+          }
+    }
+	
+	public void sendAtomMessage(OtpErlangAtom IdAtom, String name) throws Exception
+    {
+        OtpErlangAtom NameAtom = new OtpErlangAtom(name);
+        int counter = 1;
+        while(counter == 1) {
+
+                OtpErlangObject[] send = new OtpErlangObject[3];
+                send[0] = myMbox.self();
+                send[1] = IdAtom;
+                send[2] = NameAtom;
+                
+                OtpErlangTuple myTuple = new OtpErlangTuple(send);
+                System.out.println(myTuple);
+                myMbox.send(from, myTuple);
+                counter--;
+          }
+    }
+	public void sendMessage2(String torrentId, String name, String name2) throws Exception
+    {
+		OtpErlangAtom IdAtom = new OtpErlangAtom(torrentId);
         OtpErlangAtom myAtom = new OtpErlangAtom(name);
+        OtpErlangAtom myAtom2 = new OtpErlangAtom(name2);
+        int counter = 1;
+        while(counter == 1) {
+                OtpErlangObject[] send = new OtpErlangObject[4];
+                send[0] = myMbox.self();
+                send[1] = IdAtom;
+                send[2] = myAtom;
+                send[3] = myAtom2;
+                
+                OtpErlangTuple myTuple = new OtpErlangTuple(send);
+                System.out.println(myTuple);
+                myMbox.send(from, myTuple);
+                counter--;
+}
+}
+
+	public void sendMessage1(String name) {
+		// TODO Auto-generated method stub
+		OtpErlangAtom NameAtom = new OtpErlangAtom(name);
         int counter = 1;
         while(counter == 1) {
 
                 OtpErlangObject[] send = new OtpErlangObject[2];
                 send[0] = myMbox.self();
-                send[1] = myAtom;
+                send[1] = NameAtom;
                 
                 OtpErlangTuple myTuple = new OtpErlangTuple(send);
                 System.out.println(myTuple);
                 myMbox.send(from, myTuple);
                 counter--;
-}
-}
-	public void sendMessage2(String name, String name2) throws Exception
-    {
-        OtpErlangAtom myAtom = new OtpErlangAtom(name);
-        OtpErlangAtom myAtom2 = new OtpErlangAtom(name2);
-        int counter = 1;
-        while(counter == 1) {
-                OtpErlangObject[] send = new OtpErlangObject[3];
-                send[0] = myMbox.self();
-                send[1] = myAtom;
-                send[2] = myAtom2;
-                
-                OtpErlangTuple myTuple = new OtpErlangTuple(send);
-                System.out.println(myTuple);
-                myMbox.send(from, myTuple);
-                counter--;
-}
-}
+        }
+	}
+
 }

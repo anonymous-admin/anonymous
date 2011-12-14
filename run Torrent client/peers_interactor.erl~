@@ -131,7 +131,7 @@ loop(Socket,Remain,PID)->
 	    loop(Socket,Remain,PID)
     after 60000 ->
 	    PID ! stop,
-	    %io:format("time out  !!!~n and all dic info is ~w~n",[erase()]),
+	    io:format("time out  !!!~n and all dic info is ~w~n",[erase()]),
 	    gen_tcp:close(Socket)
     end.
 

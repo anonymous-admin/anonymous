@@ -29,6 +29,6 @@ start_peer(Torrent, Ip, Port) ->
 	undefined ->
 	    PeerChild = {Id, {peers_interactor, start_link, [[Torrent, Ip, Port]]},
 			 transient, 2000, worker, [peers_interactor]},
-	    supervisor:start_child(peers_interactor, PeerChild);
+	    supervisor:start_child(dynamic_supervisor, PeerChild);
 	_         -> false
     end.

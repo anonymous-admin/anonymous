@@ -32,7 +32,7 @@ terminate(_Reason,_Data)->
     gen_server:cast(self(), stop).
 
 start_link([Tracker, Timeout, Torrent])->
-    gen_server:start_link(?MODULE,[Tracker, Timeout, Torrent],[{debug, [trace]}]).
+    gen_server:start_link(?MODULE,[Tracker, Timeout, Torrent],[]).
 
 send_request(URL)->
     inets:start(),
@@ -93,7 +93,10 @@ spawn_peers([], _) ->
 spawn_peers([H|T], Torrent) ->
     io:format("spawning peers"),
     [Ip,Port] = H,
-    dynamic_supervisor:start_peer(Torrent, Ip, Port),
+    case whereis(list_to_atom(Ip)) of
+	undefined -> dynamic_supervisor:start_peer(Torrent, Ip, Port);
+	_         -> ok
+    end,
     spawn_peers(T, Torrent).
 
 handle_call(_,_,_) ->

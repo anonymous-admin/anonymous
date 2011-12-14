@@ -13,7 +13,7 @@ init([Tracker, Timeout, Torrent])->
     io:format("Tracker started: ~p~n", [URL]),
     {Data, NewTimeout} = case send_request(URL) of
 	{ok,Result} ->
-	    io:format("in case"),
+	    io:format("in case~n"),
 	    [Seeders,Leechers,Interval,Peers] = response_handler(Result),
 	    NewTracker = Tracker#tracker_info{interval=integer_to_list(Interval),event=""},
 	    gen_server:cast(msg_controller, {notify, seeders, {Torrent#torrent.id, integer_to_list(Seeders)}}),
@@ -25,13 +25,14 @@ init([Tracker, Timeout, Torrent])->
 	    {{Tracker, Torrent},Timeout};
 	Last -> io:format("Bad clause: ~p~n", [Last])	
     end,
+    io:format("tracker init done"),
     {ok, Data, NewTimeout}.
 
 terminate(_Reason,_Data)->
     gen_server:cast(self(), stop).
 
 start_link([Tracker, Timeout, Torrent])->
-    gen_server:start_link(?MODULE,[Tracker, Timeout, Torrent],[{debug, [trace]}]).
+    gen_server:start_link(?MODULE,[Tracker, Timeout, Torrent],[]).
 
 send_request(URL)->
     inets:start(),
@@ -46,7 +47,7 @@ response_handler(Result)->
     {_Status_line, _Headers, Body} = Result,
     Decoded_Body = parser:decode(list_to_binary(Body)),
     [Interval,Seeds,Leechers,Peers]=interpreter:get_tracker_response_info(Decoded_Body),
-    io:format("after response info"),
+    io:format("after response info~n"),
     %%io:format("seeds:~p  leechers:~p  interval :~p\n",[S,L,NewInterval]),
     [Seeds,Leechers,Interval,Peers].
 
@@ -59,7 +60,7 @@ handle_cast(tracker_request_info,{Tracker, Torrent})->
     {Data, Timeout} = case send_request(URL) of
 	{ok,Result} ->
 	    [Seeders,Leechers,Interval,Peers] = response_handler(Result),
-%	    spawn_peers(Peers, Torrent),
+	    spawn_peers(Peers, Torrent),
 	    NewTracker = Tracker#tracker_info{interval=integer_to_list(Interval)},
 	    %SEND BACK INFO TO TORRENT
 	    gen_server:cast(msg_controller, {notify, seeders, {Torrent#torrent.id, integer_to_list(Seeders)}}),

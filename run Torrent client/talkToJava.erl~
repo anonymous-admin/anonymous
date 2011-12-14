@@ -25,7 +25,7 @@ init(NodeAtom) ->
                                                       {tracker_info,-1}, {seeders,-1}, {leechers,-1}, 
                                                       {uploaded,-1}, {downloaded,-1}, {left,-1},
 						      {torrent_size,-1}, {pieces,-1},
-                                                      {download_speed,-1}, {upload_speed,-1}]}),
+                                                      {download_speed,-1}, {upload_speed,-1}, {filename,-1}]}),
     {ok, NodeAtom}.
 
 terminate(_Reason, _NodeAtom) ->
@@ -34,13 +34,18 @@ terminate(_Reason, _NodeAtom) ->
 handle_cast(stop, _NodeAtom) ->
     {stop, normal, _NodeAtom};
 
+handle_cast({notify, _Tag, {-1, _Value}}, NodeAtom) ->
+    {noreply, NodeAtom};
+
 handle_cast({notify, Tag, {Id, Value}}, NodeAtom) ->
-    TorrentId = atom_to_list(Id),
+    
+
     Target = {mailbox2, NodeAtom},
     
         %%receives from other erlang modules sends back to notice java
     case Tag of
     	torrent_info ->
+	    Filename = Value#torrent.filename,
 	    %Seeders = Value#torrent.seeders,
 	    %Leechers = Value#torrent.leechers,
 	    Size = Value#torrent.size,
@@ -50,7 +55,11 @@ handle_cast({notify, Tag, {Id, Value}}, NodeAtom) ->
 	    %{mailbox2, NodeAtom} ! {self(), TorrentId, 6, Leechers},
 	    Target ! {self(), TorrentId, 1, Size},
 	    Target ! {self(), TorrentId, 7, Downloaded},
+	    Target ! {self(), TorrentId, 0, Filename},
 	    sendFiles(Files, NodeAtom, TorrentId);
+
+	filename ->
+	    Target ! {self(), TorrentId, 0, Value};
 
 	tracker_info ->
 	    Uploaded = Value#tracker_info.uploaded,
@@ -96,30 +105,31 @@ handle_info(Info, NodeAtom) ->
 	    gen_server:cast(msg_controller, {notify, exit, exit});
 	{_From, open,FileDir} ->
 	    io:format("Message received: ~p~n", [FileDir]),
-	    gen_server:cast(msg_controller, {notify, torrent_status, {torrent1, opened}}),
-	    gen_server:cast(msg_controller, {notify, torrent_filepath,{torrent1, FileDir}});
-	{_From, start} ->
+	    gen_server:cast(msg_controller, {notify, torrent_status, {-1, opened}}),
+	    gen_server:cast(msg_controller, {notify, torrent_filepath,{-1, FileDir}});
+	{_From, Id, start} ->
 	    io:format("Message received: ~p~n", [resumed]),
-	    gen_server:cast(msg_controller, {notify, torrent_status,{torrent1, resume}});
-	{_From, stop} ->
+	    gen_server:cast(msg_controller, {notify, torrent_status,{Id, resume}});
+	{_From, Id, stop} ->
 	    io:format("Message received: ~p~n", [stopped]),
-       	    gen_server:cast(msg_controller, {notify, torrent_status,{torrent1, stopped}});
-	{_From, pause} ->
+       	    gen_server:cast(msg_controller, {notify, torrent_status,{Id, stopped}});
+	{_From, Id, pause} ->
 	    io:format("Message received: ~p~n", [paused]),
-	    gen_server:cast(msg_controller, {notify, torrent_status, {torrent1, paused}});
-	{_From, delete} ->
-	    io:format("Message received: ~p~n", [deleted]),
-	    gen_server:cast(msg_controller, {notify, torrent_status,{torrent1, deleted}});
+	    gen_server:cast(msg_controller, {notify, torrent_status, {Id, paused}});
+	{_From, Id, delete} ->
+	    io:format("Message received: ~p for id: ~p~n", [deleted, Id]),
+	    gen_server:cast(msg_controller, {notify, torrent_status, {Id, deleted}});
 	{_From, dir,DirList} ->
 	    io:format("Counter is at value: ~p~n", [DirList]),
-	    gen_server:cast(msg_controller, {notify, default_path,{torrent1, DirList}})
+	    gen_server:cast(msg_controller, {notify, default_path,{-1, DirList}})
     end,
     {noreply, NodeAtom}.
 
 sendFiles([],_,_) ->
     ok;
 sendFiles([H|T], NodeAtom, TorrentId) ->
-    {mailbox2, NodeAtom} ! {self(), TorrentId, 10, H},
+    [[ToSend]|_] = H,
+    {mailbox2, NodeAtom} ! {self(), TorrentId, 10, binary_to_list(ToSend)},
     sendFiles(T, NodeAtom, TorrentId).
 
 code_change(_, _, _) ->
