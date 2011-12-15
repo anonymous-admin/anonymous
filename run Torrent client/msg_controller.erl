@@ -30,8 +30,20 @@ handle_cast({notify,Event,{Id,Var}}, Interests) ->
     io:format("received msg ~p,~n ", [Event]),
     case dict:is_key(Event,Interests) of
 	true ->
-	    io:format(" event found ~w~n", [Event]),			     
-	    notify_processes(dict:fetch(Event,Interests), Id, Event, Var);		
+	    io:format(" event found ~w~n", [Event]),
+	    case (Id == -1) of
+		true -> 
+		    notify_processes(dict:fetch(Event,Interests), Id, Event, Var),	    
+		    io:format(" event sent to ~w for torrent id ~w~n", [Event,Id]);
+		false ->
+		    case whereis(Id) of
+			undefined ->
+			    io:format(" given torrent id, ~w~n is undefined ", [Id]);
+			_Else ->
+			    notify_processes(dict:fetch(Event,Interests), Id, Event, Var),	    
+			    io:format(" event sent to ~w for torrent id ~w~n", [Event,Id])
+		    end
+            end;
 	false ->
 	    io:format("no subscriber found for event ~p~n", [Event])
     end,
@@ -95,20 +107,9 @@ notify_processes([], _, _, _) ->
 	ok;
 
 notify_processes([{Subscriber,TorrentId}|T], TorrentId, Event, Var) ->
-        case (TorrentId /= -1) of
-	    true -> 
-		case whereis(TorrentId) of
-		    undefined -> {error, dead_torrent};
-		    _ ->
-			gen_server:cast(Subscriber, {notify, Event, {TorrentId, Var}}), %%REMEMBER TO REGISTER ALL PROCESSES
-			io:format("event sent to ~p,~n", [Subscriber]),
-			notify_processes(T, TorrentId, Event, Var)
-                end;
-	    _    -> 
-		gen_server:cast(Subscriber, {notify, Event, {TorrentId, Var}}),
-		io:format("event sent to ~p~n", [Subscriber]),
-		notify_processes(T, TorrentId, Event, Var)
-        end;
+        gen_server:cast(Subscriber, {notify, Event, {TorrentId, Var}}), %%REMEMBER TO REGISTER ALL PROCESSES
+	io:format("event sent to ~p,~n", [Subscriber]),
+	notify_processes(T, TorrentId, Event, Var);
 
 notify_processes([{Subscriber,Id}|T], TorrentId, Event, Var) ->	
         case Id of

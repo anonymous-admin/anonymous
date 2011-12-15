@@ -39,11 +39,15 @@ handle_cast({notify, Tag, {Id, Value}}, {Id, Dict, Entries, {Downloaded, Left, E
 		resumed   -> Dynamics = {Downloaded, Left, "", Max_peers};
 		deleted   -> 
 		    Dynamics = {Downloaded, Left, "", Max_peers},
-		    kill_trackers(Dict),
+		    %spawn(fun() -> kill_trackers(Dict) end),
+		    supervisor:terminate_child(dynamic_supervisor, Id),
 		    terminate([], {Id, [], [], []})
 	    end
     end,
-    {noreply, {Id, Dict, Entries, Dynamics}}.
+    {noreply, {Id, Dict, Entries, Dynamics}};
+
+handle_cast({set_dynamics_event, NewEvent}, {Id, Dict, Entries, {Downloaded, Left, _Event, Max_peers}}) ->
+    {noreply, {Id, Dict, Entries, {Downloaded, Left, NewEvent, Max_peers}}}.
 
 handle_call(get_dynamics, _From, {Id, Dict, Entries, Dynamics}) ->
     {reply, Dynamics, {Id, Dict, Entries, Dynamics}}.
@@ -63,6 +67,8 @@ spawn_trackers([], Dict, Entries, Torrent_info) ->
     gen_server:cast(Torrent_info#torrent.id, {trackerinfo, {Dict, Entries}});
 spawn_trackers([H|T], Dict, Entries, Torrent_info) -> 
     {_, Pid} = dynamic_supervisor:start_tracker(H, Torrent_info),
+    %gen_server:cast(Pid, {tracker_request_info,{H#tracker_info{event="started"}, Torrent_info}}),
+    gen_server:cast(self(), {set_dynamics_event, ""}),
     NewDict = dict:store(Entries+1, {Pid, H}, Dict),
     spawn_trackers(T, NewDict, Entries+1, Torrent_info).
 
@@ -71,8 +77,9 @@ kill_trackers(Dict) ->
 kill_trackers([], _Dict) ->
     ok;
 kill_trackers([H|T], Dict) ->
-    {ok, {Pid, _}} = dict:find(H, Dict),
-    gen_server:cast(Pid, stop),
+    Id = list_to_atom(H#tracker_info.url),
+    supervisor:terminate_child(dynamic_supervisor, Id),
+    supervisor:delete_child(dynamic_supervisor, Id),
     kill_trackers(T, Dict).
 
 handle_info(_, _) ->

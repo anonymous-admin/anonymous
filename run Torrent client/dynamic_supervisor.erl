@@ -9,7 +9,7 @@ start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, [{debug, [trace]}]).
 
 init(_Args) ->
-    {ok,{{one_for_one,3,1}, []}}.
+    {ok,{{one_for_one,2,5}, []}}.
 
 start_tracker(Tracker, Torrent) ->
     Id = list_to_atom(Tracker#tracker_info.url),

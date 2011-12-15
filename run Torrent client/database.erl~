@@ -17,7 +17,6 @@
 -module(database).
 -export([start_link/0, start_link/1, stop/0]).
 -export([init/1, terminate/2, handle_cast/2]).
--export([handle_call/3, handle_info/2, code_change/3]).
 -behaviour(gen_server).
 
 -include("defs.hrl").
@@ -38,9 +37,8 @@ init(_Args) ->
     dets:to_ets(?DATAFILE, ets:new(database_table, [set, named_table])),
     case whereis(msg_controller) of
 	undefined -> false;
-	_         -> gen_server:cast(msg_controller, {subscribe, database, [{parsed_info,-1}, {torrent_status,-1}]}),
-	             timer:sleep(1000)
-		     notify_blackboard()
+	_         -> gen_server:cast(msg_controller, {subscribe, database, [{torrent_info,-1}, {torrent_status,-1}]}),
+	             notify_blackboard()
     end,
     {ok, _Args}.
 
@@ -153,12 +151,3 @@ notify_blackboard([]) -> ok;
 notify_blackboard([H|T]) ->
     gen_server:cast(msg_controller, {notify, torrent_info, {H#torrent.id, H}}),
     notify_blackboard(T).
-
-handle_call(_,_,_) ->
-    ok.
-
-handle_info(_,_) ->
-    ok.
-
-code_change(_,_,_) ->
-    ok.

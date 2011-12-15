@@ -39,11 +39,15 @@ handle_cast({notify, Tag, {Id, Value}}, {Id, Dict, Entries, {Downloaded, Left, E
 		resumed   -> Dynamics = {Downloaded, Left, "", Max_peers};
 		deleted   -> 
 		    Dynamics = {Downloaded, Left, "", Max_peers},
-		    kill_trackers(Dict, Entries),
+		    spawn(fun() -> kill_trackers(Dict) end),
+		    supervisor:terminate_child(dynamic_supervisor, Id),
 		    terminate([], {Id, [], [], []})
 	    end
     end,
-    {noreply, {Id, Dict, Entries, Dynamics}}.
+    {noreply, {Id, Dict, Entries, Dynamics}};
+
+handle_cast({set_dynamics_event, NewEvent}, {Id, Dict, Entries, {Downloaded, Left, _Event, Max_peers}}) ->
+    {noreply, {Id, Dict, Entries, {Downloaded, Left, NewEvent, Max_peers}}}.
 
 handle_call(get_dynamics, _From, {Id, Dict, Entries, Dynamics}) ->
     {reply, Dynamics, {Id, Dict, Entries, Dynamics}}.
@@ -60,20 +64,23 @@ handle_call(get_dynamics, _From, {Id, Dict, Entries, Dynamics}) ->
 %% Id = torrent id
 
 spawn_trackers([], Dict, Entries, Torrent_info) ->
-    io:format("FINAL ENTRIES: ~p~n", [Entries]),
     gen_server:cast(Torrent_info#torrent.id, {trackerinfo, {Dict, Entries}});
 spawn_trackers([H|T], Dict, Entries, Torrent_info) -> 
-    io:format("HEAD: ~p~n TAIL: ~p~n ENTRIES ~p~n", [H,T,Entries]),
     {_, Pid} = dynamic_supervisor:start_tracker(H, Torrent_info),
-    NewDict = dict:store(Entries, {Pid, H}, Dict),
+    %gen_server:cast(Pid, {tracker_request_info,{H#tracker_info{event="started"}, Torrent_info}}),
+    gen_server:cast(self(), {set_dynamics_event, ""}),
+    NewDict = dict:store(Entries+1, {Pid, H}, Dict),
     spawn_trackers(T, NewDict, Entries+1, Torrent_info).
 
-kill_trackers(_, 0) ->
+kill_trackers(Dict) ->
+    kill_trackers(dict:fetch_keys(Dict), Dict).
+kill_trackers([], _Dict) ->
     ok;
-kill_trackers(Dict, Entries) ->
-    {ok, {Pid, _}} = dict:find(Entries, Dict),
-    gen_server:cast(Pid, stop),
-    kill_trackers(Dict, Entries-1).
+kill_trackers([H|T], Dict) ->
+    Id = list_to_atom(H#tracker_info.url),
+    supervisor:terminate_child(dynamic_supervisor, Id),
+    supervisor:delete_child(dynamic_supervisor, Id),
+    kill_trackers(T, Dict).
 
 handle_info(_, _) ->
     ok.

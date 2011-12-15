@@ -7,7 +7,6 @@
 -include("defs.hrl").
 
 init([Torrent, Ip, Port])->
-<<<<<<< HEAD
     %%gen_server:cast(Torrent#torrent.id, {peer_spawned, list_to_atom(Ip)}),
     %%gen_server:cast(msg_controller, {subscribe, list_to_atom(Ip), [{available_pieces, Torrent#torrent.id}, {get_blocks, Torrent#torrent.id}]}),
     io:format("connecting to ip: ~p~n in port : ~p~n",[Ip,Port]),
@@ -42,16 +41,9 @@ init([Torrent, Ip, Port])->
     end.    
     %%handshake([Torrent, Ip, Port]),
     %%{ok,[Torrent,Socket,PID ]}.
-=======
-    %gen_server:cast(Torrent#torrent.id, {peer_spawned, list_to_atom(Ip)}),
-    gen_server:cast(msg_controller, {subscribe, list_to_atom(Ip), [{available_pieces, Torrent#torrent.id}, {get_blocks, Torrent#torrent.id},
-								   {torrent_status, Torrent#torrent.id}]}),
-    %handshake([Torrent, Ip, Port]),
-    {ok,[Torrent, Ip, Port]}.
->>>>>>> 2851379254c1ef33dd1da56ccd564d09a6bf92af
 
 terminate(_Reason,Data)->
-    {stop,Data}.
+    gen_server:cast(self(), stop).
 
 start_link([Torrent, Ip, Port])->
     gen_server:start_link({local,list_to_atom(Ip)},?MODULE,[Torrent, Ip, Port],[]).
@@ -59,12 +51,8 @@ start_link([Torrent, Ip, Port])->
 handle_call(Request,_From,Data) ->
     {reply,null,Data}.
 
-handle_cast(stop, _Data) ->
+handle_cast(stop, _Data)->
     {stop, normal, _Data};
-
-handle_cast({notify, torrent_status, {_Id, deleted}}, _Data) ->
-    gen_server:cast(self(), stop),
-    {noreply, _Data};
 
 handle_cast(Request,Data)->
     {noreply,Data}.
@@ -77,7 +65,7 @@ handle_info({tcp,_,Msg},[_Torrent,_Socket,PID ]) ->
 handle_info({tcp_closed,_Msg},_Data) ->
     io:format("CLOSED !!!!!!!! ~w~n",[_Msg]),
     gen_server:cast(logger,{peer_connection_closed}),
-    {noreply,_Data};
+    {stop,normal,_Data};
 
 handle_info(M,[Torrent,Socket,PID])->
     case M of

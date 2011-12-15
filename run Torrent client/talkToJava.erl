@@ -53,15 +53,13 @@ handle_cast({notify, Tag, {Id, Value}}, {NodeAtom, TorrentIds}) ->
     case Tag of
     	torrent_info ->
 	    Filename = Value#torrent.filename,
-	    %Seeders = Value#torrent.seeders,
-	    %Leechers = Value#torrent.leechers,
 	    Size = Value#torrent.size,
 	    Downloaded = Value#torrent.downloaded,
-	    Files = Value#torrent.files,
-	    %Target ! {self(), TorrentId, 5, Seeders},
-	    %Target ! {self(), TorrentId, 6, Leechers},
+	    Uploaded = Value#torrent.uploaded,
+	    {Files,_} = Value#torrent.files,
 	    Target ! {self(), TorrentId, 1, Size},
 	    Target ! {self(), TorrentId, 7, Downloaded},
+	    Target ! {self(), TorrentId, 8, Uploaded},
 	    Target ! {self(), TorrentId, 0, Filename},
 	    sendFiles(Files, NodeAtom, TorrentId);
 

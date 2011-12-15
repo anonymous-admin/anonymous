@@ -141,7 +141,6 @@ sendFiles([[ToSend,_]|T], NodeAtom, TorrentId) ->
 getIdAtom([], _Num, _TorrentIds) ->
     {error, not_found};
 getIdAtom([H|T], Num, TorrentIds) ->
-    io:format("CASE: ~p~n", [dict:find(H, TorrentIds)]),
     case {ok, [Num]} == dict:find(H, TorrentIds) of
 	true  -> H;
 	false -> getIdAtom(T, Num, TorrentIds)

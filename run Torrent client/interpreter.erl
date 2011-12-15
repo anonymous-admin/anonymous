@@ -8,7 +8,7 @@
 -module(interpreter).
 -author('Sorush Arefipour').
 -export([create_record/1, get_tracker_response_info/1,
-	 init/1, handle_cast/2, handle_call/3]).
+	 init/1, handle_cast/2, handle_call/3, terminate/2]).
 -compile(export_all).
 -behaviour(gen_server).
 -include("defs.hrl").
@@ -30,7 +30,7 @@ start_link(_Args) ->
     gen_server:start_link({local, interpreter}, ?MODULE, _Args, []).
 
 %% ************************************************************************************************************
-%% ******************************************** Gen_server functions ******************************************
+%% ******************************************** Gen_server functions ********************************************
 %% ************************************************************************************************************
 
 %%--------------------------------------------------------------------
@@ -43,6 +43,9 @@ init(_Args)->
     gen_server:cast(msg_controller, {subscribe, interpreter, [{torrent_filepath, -1}]}),
     {ok,null}.
 
+terminate(_Reason, _Data) ->
+    gen_server:cast(self(), stop).
+
 %%--------------------------------------------------------------------
 %% @author Sorush Arefipour
 %% @doc    interpreter.erl
@@ -54,7 +57,10 @@ handle_cast({notify, torrent_filepath, {_Id, Filepath}}, _Data)->
     Record = create_record(Filepath),
     dynamic_supervisor:start_torrent(Record),
     gen_server:cast(msg_controller, {notify, torrent_info, {Record#torrent.id, Record}}),
-    {noreply,_Data}.
+    {noreply,_Data};
+
+handle_cast(stop, _Data) ->
+    {stop, normal, _Data}.
 
 %%--------------------------------------------------------------------
 %% @author Sorush Arefipour
@@ -67,7 +73,7 @@ handle_call(_State,_From,_Data)->
     {reply,Reply,_Data}.
 
 %% ************************************************************************************************************
-%% ********************************************** External functions ******************************************
+%% ********************************************** External functions ********************************************
 %% ************************************************************************************************************
 
 %%--------------------------------------------------------------------
@@ -86,7 +92,7 @@ create_record(FileName) ->
     Comment = get_comment(Parsed_info),
     Created_by = get_created_by(Parsed_info),
     Encoding = get_encoding(Parsed_info),
-    Files = get_files(Parsed_info),
+    Files = get_files(Parsed_info, 0),
     Filename = get_filename(Parsed_info),
     Piece_length = get_piece_length(Parsed_info),
     Number_of_pieces = get_number_of_pieces(Parsed_info),
@@ -100,7 +106,7 @@ create_record(FileName) ->
 	     filename = Filename, piece_length = Piece_length, 
 	     number_of_pieces = Number_of_pieces,file_length = File_length, 
 	     pieces = Pieces, bitfield = Bitfield, trackers = TrackerInfo, 
-	     downloaded = "0", max_peers = "50", size = integer_to_list(File_length), left = integer_to_list(File_length) }.
+	     downloaded = "0", max_peers = "50", size = integer_to_list(File_length), left = integer_to_list(File_length), uploaded ="0" }.
 
 %%--------------------------------------------------------------------
 %% @author Sorush Arefipour
@@ -246,16 +252,16 @@ get_encoding({info, Info}) ->
 %%         empty, and if it is, it will return novalue.
 %% @end
 %%--------------------------------------------------------------------
-get_files({info, Info}) ->
+get_files({info, Info},FileSize) ->
     Info_dec_keys = get_info_dec_keys(Info),
     case lists:member(<<"files">>, Info_dec_keys) of
 	true ->
-     {list, Files_dict} = get_info_dec(<<"files">>, Info),
-     files_interpreter(Files_dict);
+	    {list, Files_dict} = get_info_dec(<<"files">>, Info),
+	    files_interpreter(Files_dict,FileSize,[]);
 	false ->
 	    Path = get_info_dec(<<"name">>, Info),
 	    Length = get_info_dec(<<"length">>, Info),
-	    [[[Path],Length]]
+	    {[[[Path],Length]],Length}
     end.
 
 %%--------------------------------------------------------------------
@@ -300,7 +306,8 @@ get_number_of_pieces({info, Info}) ->
 %% @end
 %%--------------------------------------------------------------------
 get_file_length({info, Info}) ->
-    get_piece_length({info, Info}) * get_number_of_pieces({info, Info}).
+    {_, Length} = get_files({info, Info}, 0),
+    Length.
 
 %%--------------------------------------------------------------------
 %% @author Sorush Arefipour
@@ -362,13 +369,14 @@ peers_compact([M1,M2,M3,M4,M5,M6|T]) ->
 %%         all other files.
 %% @end
 %%--------------------------------------------------------------------
-files_interpreter([]) ->    
-    [];
-files_interpreter([H|T]) ->
+files_interpreter([],FileSize,Acc) ->    
+    {Acc,FileSize};
+files_interpreter([H|T],FileSize,Acc) ->
     {dict, Info} = H,
     Length = dict:fetch(<<"length">>, Info),
+    Size = FileSize + Length,
     {list, Path} = dict:fetch(<<"path">>, Info),
-    [[Path, Length]|files_interpreter(T)].
+    files_interpreter(T,Size,  Acc ++ [[Path, Length]]).
 
 %%--------------------------------------------------------------------
 %% @author Sorush Arefipour
