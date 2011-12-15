@@ -12,7 +12,7 @@ init([Id, Torrent_info]) ->
 						     {left, Id}]}),
     Dict = dict:new(),
     Dynamics = {Torrent_info#torrent.downloaded, Torrent_info#torrent.left, "started", Torrent_info#torrent.max_peers},
-    spawn(fun() -> spawn_trackers(Torrent_info#torrent.trackers, Dict, 1, Torrent_info) end),
+    spawn(fun() -> spawn_trackers(Torrent_info#torrent.trackers, Dict, 0, Torrent_info) end),
     {ok, {Id, Dict, 0, Dynamics}}.
 
 terminate(_Reason, {Id, _Dict, _Entries, _Dynamics}) ->
@@ -39,7 +39,7 @@ handle_cast({notify, Tag, {Id, Value}}, {Id, Dict, Entries, {Downloaded, Left, E
 		resumed   -> Dynamics = {Downloaded, Left, "", Max_peers};
 		deleted   -> 
 		    Dynamics = {Downloaded, Left, "", Max_peers},
-		    kill_trackers(Dict, Entries),
+		    kill_trackers(Dict),
 		    terminate([], {Id, [], [], []})
 	    end
     end,
@@ -63,15 +63,17 @@ spawn_trackers([], Dict, Entries, Torrent_info) ->
     gen_server:cast(Torrent_info#torrent.id, {trackerinfo, {Dict, Entries}});
 spawn_trackers([H|T], Dict, Entries, Torrent_info) -> 
     {_, Pid} = dynamic_supervisor:start_tracker(H, Torrent_info),
-    NewDict = dict:store(Entries, {Pid, H}, Dict),
+    NewDict = dict:store(Entries+1, {Pid, H}, Dict),
     spawn_trackers(T, NewDict, Entries+1, Torrent_info).
 
-kill_trackers(_, 0) ->
+kill_trackers(Dict) ->
+    kill_trackers(dict:fetch_keys(Dict), Dict).
+kill_trackers([], _Dict) ->
     ok;
-kill_trackers(Dict, Entries) ->
-    {ok, {Pid, _}} = dict:find(Entries),
+kill_trackers([H|T], Dict) ->
+    {ok, {Pid, _}} = dict:find(H, Dict),
     gen_server:cast(Pid, stop),
-    kill_trackers(Dict, Entries-1).
+    kill_trackers(T, Dict).
 
 handle_info(_, _) ->
     ok.

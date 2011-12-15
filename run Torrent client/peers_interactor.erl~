@@ -9,7 +9,7 @@
 init([Torrent, Ip, Port])->
     %gen_server:cast(Torrent#torrent.id, {peer_spawned, list_to_atom(Ip)}),
     gen_server:cast(msg_controller, {subscribe, list_to_atom(Ip), [{available_pieces, Torrent#torrent.id}, {get_blocks, Torrent#torrent.id}]}),
-    handshake([Torrent, Ip, Port]),
+    %handshake([Torrent, Ip, Port]),
     {ok,[Torrent, Ip, Port]}.
 
 terminate(_Reason,Data)->
@@ -131,7 +131,7 @@ loop(Socket,Remain,PID)->
 	    loop(Socket,Remain,PID)
     after 60000 ->
 	    PID ! stop,
-	    io:format("time out  !!!~n and all dic info is ~w~n",[erase()]),
+	    %io:format("time out  !!!~n and all dic info is ~w~n",[erase()]),
 	    gen_tcp:close(Socket)
     end.
 

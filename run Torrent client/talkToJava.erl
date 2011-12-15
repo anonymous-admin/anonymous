@@ -13,12 +13,12 @@ start_link(_Args) ->
     ComputerName = net_adm:localhost(),
     NodeName = "javaNode@" ++ ComputerName,
     NodeAtom = list_to_atom(NodeName),
-    gen_server:start_link({local, gui}, ?MODULE, NodeAtom, []).
+    gen_server:start_link({local, gui}, ?MODULE, [NodeAtom, dict:new()], []).
 
 stop() ->
     gen_server:cast(gui, stop).
 
-init(NodeAtom) ->
+init([NodeAtom, TorrentIds]) ->
     timer:sleep(4000),
     {mailbox, NodeAtom} ! {self(), "startconnection"},
     gen_server:cast(msg_controller, {subscribe, gui, [{exit,-1}, {torrent_info,-1}, {torrent_status,-1}, 
@@ -26,19 +26,26 @@ init(NodeAtom) ->
                                                       {uploaded,-1}, {downloaded,-1}, {left,-1},
 						      {torrent_size,-1}, {pieces,-1},
                                                       {download_speed,-1}, {upload_speed,-1}, {filename,-1}]}),
-    {ok, NodeAtom}.
+    {ok, {NodeAtom, TorrentIds}}.
 
-terminate(_Reason, _NodeAtom) ->
+terminate(_Reason, {_NodeAtom, _TorrentIds}) ->
     gen_server:cast(gui, stop).
 
-handle_cast(stop, _NodeAtom) ->
-    {stop, normal, _NodeAtom};
+handle_cast(stop, {_NodeAtom, _TorrentIds}) ->
+    {stop, normal, {_NodeAtom, _TorrentIds}};
 
-handle_cast({notify, _Tag, {-1, _Value}}, NodeAtom) ->
-    {noreply, NodeAtom};
+handle_cast({notify, _Tag, {-1, _Value}}, {NodeAtom, TorrentIds}) ->
+    {noreply, {NodeAtom, TorrentIds}};
 
-handle_cast({notify, Tag, {Id, Value}}, NodeAtom) ->
-    TorrentId = Id,
+handle_cast({notify, Tag, {Id, Value}}, {NodeAtom, TorrentIds}) ->
+
+    %Check if the key already exists
+    case lists:member(Id, dict:fetch_keys(TorrentIds)) of
+	 false -> NewDict = dict:append(Id, dict:size(TorrentIds)+1, TorrentIds);
+         true  -> NewDict = TorrentIds
+    end,
+
+    {ok, [TorrentId]} = dict:find(Id, NewDict),
 
     Target = {mailbox2, NodeAtom},
     
@@ -51,8 +58,8 @@ handle_cast({notify, Tag, {Id, Value}}, NodeAtom) ->
 	    Size = Value#torrent.size,
 	    Downloaded = Value#torrent.downloaded,
 	    Files = Value#torrent.files,
-	    %{mailbox2, NodeAtom} ! {self(), TorrentId, 5, Seeders},
-	    %{mailbox2, NodeAtom} ! {self(), TorrentId, 6, Leechers},
+	    %Target ! {self(), TorrentId, 5, Seeders},
+	    %Target ! {self(), TorrentId, 6, Leechers},
 	    Target ! {self(), TorrentId, 1, Size},
 	    Target ! {self(), TorrentId, 7, Downloaded},
 	    Target ! {self(), TorrentId, 0, Filename},
@@ -93,9 +100,9 @@ handle_cast({notify, Tag, {Id, Value}}, NodeAtom) ->
 	finished ->
 	    Target ! {self(), TorrentId, 9, "Torrent finished downloading"}
     end,
-    {noreply, NodeAtom}.
+    {noreply, {NodeAtom, NewDict}}.
 
-handle_info(Info, NodeAtom) ->
+handle_info(Info, {NodeAtom, TorrentIds}) ->
     case Info of
         %%receives from java
 	{_From, connok} ->
@@ -109,28 +116,40 @@ handle_info(Info, NodeAtom) ->
 	    gen_server:cast(msg_controller, {notify, torrent_filepath,{-1, FileDir}});
 	{_From, Id, start} ->
 	    io:format("Message received: ~p~n", [resumed]),
-	    gen_server:cast(msg_controller, {notify, torrent_status,{Id, resume}});
+	    gen_server:cast(msg_controller, {notify, torrent_status,{getIdAtom(Id, TorrentIds), resume}});
 	{_From, Id, stop} ->
 	    io:format("Message received: ~p~n", [stopped]),
-       	    gen_server:cast(msg_controller, {notify, torrent_status,{Id, stopped}});
+       	    gen_server:cast(msg_controller, {notify, torrent_status,{getIdAtom(Id, TorrentIds), stopped}});
 	{_From, Id, pause} ->
 	    io:format("Message received: ~p~n", [paused]),
-	    gen_server:cast(msg_controller, {notify, torrent_status, {Id, paused}});
+	    gen_server:cast(msg_controller, {notify, torrent_status, {getIdAtom(Id, TorrentIds), paused}});
 	{_From, Id, delete} ->
-	    io:format("Message received: ~p for id: ~p~n", [deleted, Id]),
-	    gen_server:cast(msg_controller, {notify, torrent_status, {Id, deleted}});
+	    io:format("Message received: ~p for id: ~p~n", [deleted, getIdAtom(Id, TorrentIds)]),
+	    gen_server:cast(msg_controller, {notify, torrent_status, {getIdAtom(Id, TorrentIds), deleted}});
 	{_From, dir,DirList} ->
 	    io:format("Counter is at value: ~p~n", [DirList]),
 	    gen_server:cast(msg_controller, {notify, default_path,{-1, DirList}})
     end,
-    {noreply, NodeAtom}.
+    {noreply, {NodeAtom, TorrentIds}}.
 
 sendFiles([],_,_) ->
     ok;
-sendFiles([H|T], NodeAtom, TorrentId) ->
-    [[ToSend]|_] = H,
-    {mailbox2, NodeAtom} ! {self(), TorrentId, 10, binary_to_list(ToSend)},
+sendFiles([[ToSend,_]|T], NodeAtom, TorrentId) ->
+    {mailbox2, NodeAtom} ! {self(), TorrentId, 10, binary_to_list(hd(lists:reverse(ToSend)))},
     sendFiles(T, NodeAtom, TorrentId).
+
+getIdAtom([], _Num, _TorrentIds) ->
+    {error, not_found};
+getIdAtom([H|T], Num, TorrentIds) ->
+    case {ok, [Num]} == dict:find(H, TorrentIds) of
+	true  -> H;
+	false -> getIdAtom(T, Num, TorrentIds)
+    end.
+
+getIdAtom(Num, TorrentIds) ->
+    getIdAtom(dict:fetch_keys(TorrentIds), Num, TorrentIds).
+	  
+    
 
 code_change(_, _, _) ->
     ok.

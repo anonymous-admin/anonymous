@@ -11,6 +11,8 @@ import javax.swing.*;
 
 import com.ericsson.otp.erlang.OtpErlangAtom;
 import com.ericsson.otp.erlang.OtpErlangDecodeException;
+import com.ericsson.otp.erlang.OtpErlangLong;
+
 import components.TorrentFilter;
 
 public class GUI {
@@ -340,7 +342,7 @@ public class GUI {
              startButton.addActionListener(new ActionListener() {
                  public void actionPerformed(ActionEvent e) {
      				try {
-     					tte.sendAtomMessage(getActiveTorrent().getId(), "start");
+     					tte.sendMessage(getActiveTorrent().getId(), "start");
      					startButton.setVisible(false);
      					pauseButton.setVisible(true);
      					stopButton.setVisible(true);
@@ -369,7 +371,7 @@ public class GUI {
      								pauseButton.setVisible(false);
      								stopButton.setVisible(false);
      								startButton.setVisible(true);
-     								tte.sendAtomMessage(getActiveTorrent().getId(), "pause");
+     								tte.sendMessage(getActiveTorrent().getId(), "pause");
      								statusField.setText("Status: " +"Paused");
      							} catch (Exception e1) {
      								// TODO Auto-generated catch block
@@ -394,7 +396,7 @@ public class GUI {
      								stopButton.setVisible(false);
      								pauseButton.setVisible(false);
      								startButton.setVisible(true);
-     								tte.sendAtomMessage(getActiveTorrent().getId(), "stop");
+     								tte.sendMessage(getActiveTorrent().getId(), "stop");
      								statusField.setText("Status: " +"Stopped");
      							} catch (Exception e1) {
      								// TODO Auto-generated catch block
@@ -459,7 +461,7 @@ public class GUI {
                  		System.out.println("canceled by user"); 
                  	} else {
      				try {
-     					tte.sendAtomMessage(getActiveTorrent().getId(), "delete");
+     					tte.sendMessage(getActiveTorrent().getId(), "delete");
      					Torrent torrent = getActiveTorrent();
      					for (int i = 0; i < torrents.size(); i++) {
      						if (torrent.getId().equals(torrents.get(i).getId())) {
@@ -590,7 +592,7 @@ public class GUI {
              progressBar.setBounds(20, 450, 980, 50);
              pane.add(progressBar, 0);
     	}
-    	public static void setField(OtpErlangAtom torrentId, int tag, String value) {
+    	public static void setField(OtpErlangLong torrentId, int tag, String value) {
     		Torrent torrent = getTorrent(torrentId);
     		switch (tag) {
     		case 0:
@@ -671,18 +673,18 @@ public class GUI {
     		return null;
     	}
     	
-    	private static Torrent getTorrent(OtpErlangAtom id) {
+    	private static Torrent getTorrent(OtpErlangLong torrentId) {
     		Torrent torrent;
     		for (int i = 0; i < torrents.size(); i++) {
     			torrent = torrents.get(i);
-    			if(id.equals(torrent.getId()))
+    			if(torrentId.equals(torrent.getId()))
     				return torrent;
     		}
-    		return addTorrent(id);
+    		return addTorrent(torrentId);
     	}
     	
-    	public static Torrent addTorrent(OtpErlangAtom id) {
-    		final Torrent newTorrent = new Torrent(id);
+    	public static Torrent addTorrent(OtpErlangLong torrentId) {
+    		final Torrent newTorrent = new Torrent(torrentId);
     		torrents.add(newTorrent);
     		newTorrent.setTorrentButton(newTorrent, torrents.size()-1);
     		pane.add(newTorrent.getTorrentButton(),1);        
@@ -694,14 +696,14 @@ public class GUI {
                 }
             });
             
-            setActiveTorrent(id);
+            setActiveTorrent(torrentId);
     		return newTorrent;
     	}
     	
-    	public static void setActiveTorrent(OtpErlangAtom otpErlangAtom) {
+    	public static void setActiveTorrent(OtpErlangLong torrentId) {
     		for (int i = 0; i < torrents.size(); i++) {
     			Torrent torrent = torrents.get(i);
-    			if (torrent.getId().equals(otpErlangAtom)) {
+    			if (torrent.getId().equals(torrentId)) {
     				torrent.setActive(true);
     				torrent.getTorrentButton().setBackground(Color.ORANGE);
     			}

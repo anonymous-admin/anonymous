@@ -75,9 +75,15 @@ handle_cast(tracker_request_info,{Tracker, Torrent})->
 
 handle_info(timeout, {Tracker, Torrent}) ->
     io:format("Interval"),
-    {Downloaded, Left, Event, Max_peers} = gen_server:call(Torrent#torrent.id, get_dynamics),
-    NewTracker = Tracker#tracker_info{downloaded=Downloaded, left=Left, event=Event, num_want=Max_peers},
-    gen_server:cast(self(), tracker_request_info),
+    case whereis(Torrent#torrent.id) of
+	undefined -> 
+	    NewTracker = Tracker,
+	    {error, dead};
+        _         ->
+            {Downloaded, Left, Event, Max_peers} = gen_server:call(Torrent#torrent.id, get_dynamics),
+            NewTracker = Tracker#tracker_info{downloaded=Downloaded, left=Left, event=Event, num_want=Max_peers},
+            gen_server:cast(self(), tracker_request_info)
+    end,
     {noreply, {NewTracker,Torrent},NewTracker#tracker_info.interval}.
     
 
@@ -91,7 +97,6 @@ create_record() ->
 spawn_peers([], _) ->
     ok;
 spawn_peers([H|T], Torrent) ->
-    io:format("spawning peers"),
     [Ip,Port] = H,
     case whereis(list_to_atom(Ip)) of
 	undefined -> dynamic_supervisor:start_peer(Torrent, Ip, Port);

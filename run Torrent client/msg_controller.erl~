@@ -83,7 +83,6 @@ handle_cast({Oops}, Interests) ->
 
 
 subscribe_processIntrest([],_ProcessName, Interests) ->
-        io:format("Subscription list: ~p~n", [Interests]),
 	Interests;
 
 
@@ -96,9 +95,13 @@ notify_processes([], _, _, _) ->
 	ok;
 
 notify_processes([{Subscriber,TorrentId}|T], TorrentId, Event, Var) ->
-        gen_server:cast(Subscriber, {notify, Event, {TorrentId, Var}}), %%REMEMBER TO REGISTER ALL PROCESSES
-	io:format("event sent to ~p,~n", [Subscriber]),
-	notify_processes(T, TorrentId, Event, Var);
+        case ((whereis(TorrentId) == undefined) and (TorrentId /= -1)) of
+	    true  -> {error, dead_torrent};
+	    false ->
+		gen_server:cast(Subscriber, {notify, Event, {TorrentId, Var}}), %%REMEMBER TO REGISTER ALL PROCESSES
+		io:format("event sent to ~p,~n", [Subscriber]),
+		notify_processes(T, TorrentId, Event, Var)
+        end;
 
 notify_processes([{Subscriber,Id}|T], TorrentId, Event, Var) ->	
         case Id of

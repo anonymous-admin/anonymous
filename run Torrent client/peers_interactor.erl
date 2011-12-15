@@ -8,8 +8,9 @@
 
 init([Torrent, Ip, Port])->
     %gen_server:cast(Torrent#torrent.id, {peer_spawned, list_to_atom(Ip)}),
-    gen_server:cast(msg_controller, {subscribe, list_to_atom(Ip), [{available_pieces, Torrent#torrent.id}, {get_blocks, Torrent#torrent.id}]}),
-    handshake([Torrent, Ip, Port]),
+    gen_server:cast(msg_controller, {subscribe, list_to_atom(Ip), [{available_pieces, Torrent#torrent.id}, {get_blocks, Torrent#torrent.id},
+								   {torrent_status, Torrent#torrent.id}]}),
+    %handshake([Torrent, Ip, Port]),
     {ok,[Torrent, Ip, Port]}.
 
 terminate(_Reason,Data)->
@@ -20,6 +21,13 @@ start_link([Torrent, Ip, Port])->
 
 handle_call(Request,_From,Data) ->
     {reply,null,Data}.
+
+handle_cast(stop, _Data) ->
+    {stop, normal, _Data};
+
+handle_cast({notify, torrent_status, {_Id, deleted}}, _Data) ->
+    gen_server:cast(self(), stop),
+    {noreply, _Data};
 
 handle_cast(Request,Data)->
     {noreply,Data}.

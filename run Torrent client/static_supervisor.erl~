@@ -35,5 +35,6 @@ init(_Args) ->
 			     Dynamic_Supervisor,
 %%                           Intermediate, 
 			     Database,
-			     Interpreter]}}.
+			     Interpreter
+			     ]}}.
 

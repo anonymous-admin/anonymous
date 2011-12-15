@@ -4,11 +4,12 @@ import java.util.ArrayList;
 import javax.swing.JButton;
 
 import com.ericsson.otp.erlang.OtpErlangAtom;
+import com.ericsson.otp.erlang.OtpErlangLong;
 
 
 public class Torrent {
 
-	protected OtpErlangAtom id;
+	protected OtpErlangLong id;
 	protected ArrayList<String> files;
 	protected int seeders;
 	protected int leechers;
@@ -28,7 +29,7 @@ public class Torrent {
 	public Torrent() {
 	}
 	
-	public Torrent(OtpErlangAtom id) {
+	public Torrent(OtpErlangLong id) {
 		this.id = id;
 		this.files = new ArrayList<String>();
 	}
@@ -105,11 +106,11 @@ public class Torrent {
 		this.status = status;
 	}
 
-	public OtpErlangAtom getId() {
+	public OtpErlangLong getId() {
 	    return id;
 	}
 	
-	public void setId(OtpErlangAtom id) {
+	public void setId(OtpErlangLong id) {
 		this.id = id;
 	}
 	
