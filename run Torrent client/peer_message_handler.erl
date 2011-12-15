@@ -13,7 +13,7 @@ msg_handler(Messages,PID) ->
 	Msg ->
 	    io:format("msg rcv length ~w~n",[length(Msg)]),
 	    msg_handler(Messages ++ Msg,PID)
-    after 10000 ->
+    after 15000 ->
 	    if
 		length(Messages) > 0 ->
 		    io:format("time out2 ~n"),
@@ -33,7 +33,7 @@ check_messages(Msg,Buff,PID) ->
 	    <<Bitfield_length:32>> = list_to_binary(lists:sublist(Msg,69,4)),
 	    Bitfield = lists:sublist(Msg,73,Bitfield_length),
 	    PID ! {bitfield,Bitfield},
-	    PID ! send_interest,
+	    %%PID ! send_interest,
 	    New_length = 72+Bitfield_length,
 	    if 
 		length(Msg) > New_length ->
@@ -61,14 +61,6 @@ check_messages(Msg,Buff,PID) ->
 		true ->
 		    msg_handler([],PID)
 	    end;
-	    %% if 
-	    %% 	lists:nth(2,Status) == 0 ->
-	    %% 	    gen_tcp:send(Socket,<<0,0,1,2>>),
-	    %% 	    [_,_,A,B] =Status,
-	    %% 	    check_message(Socket,R,Buff,PID,[0,1,A,B]);
-	    %%    _->
-		%%    ok
-%	    end;
 	[0,0,0,5|Rest] ->
 	    %%io:format("the real piece index is : ~w~n",[list_to_binary(lists:sublist(lists:nthtail(1,Rest),4))]),
 	    <<Piece_index:32>> = list_to_binary(lists:sublist(lists:nthtail(1,Rest),4)),
@@ -78,7 +70,7 @@ check_messages(Msg,Buff,PID) ->
 		    PID ! {peer_have_piece,Piece_index},
 		    check_messages(New_Msg,Buff,PID);
 		true ->
-		    %%PID ! send_interest,
+		    PID ! send_interest,
 		    msg_handler([],PID)
 	    end;
 	[0,0,0,0|_R] ->
