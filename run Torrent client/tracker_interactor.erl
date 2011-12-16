@@ -27,7 +27,6 @@ make_url(T)->
 
 
 response_handler(Body)->
-    
     Decoded_Body = parser:decode(list_to_binary(Body)), 
     [Interval,Seeds,Leechers,Peers]=interpreter:get_tracker_response_info(Decoded_Body),
     io:format("after response info~n"),
@@ -39,19 +38,23 @@ handle_cast(stop, _Data)->
 
 handle_cast(tracker_request_info,{Tracker, Torrent})->
     URL = make_url(Tracker),
-    io:format("The url is ~p~n", [URL]),
     case send_request(URL) of
 	{ok,{Status_line, _Headers, Body}} ->
-	    io:format("STATUS LINE: ~p~n", [list_to_binary(Body)]),
 	    case Status_line of
-		{"HTTP/1.0",200,"OK"} ->    
-		    [Seeders,Leechers,Interval,Peers] = response_handler(Body),
-		    %spawn_peers(Peers, Torrent),
-	            NewTracker = Tracker#tracker_info{interval=integer_to_list(Interval)},
-		    %SEND BACK INFO TO TORRENT
-	            gen_server:cast(msg_controller, {notify, seeders, {Torrent#torrent.id, integer_to_list(Seeders)}}),
-	            {noreply, {NewTracker,Torrent},Interval};
-		_ -> {stop, normal, []}		
+		{"HTTP/1.0",200,"OK"} ->  
+		    {{dict,Dict},_} = parser:decode(list_to_binary(Body)),
+		    case dict:find(<<"failure reason">>,Dict) of
+		        {ok, _} -> {stop, normal, []};
+			_       ->
+			     [Seeders,Leechers,Interval,Peers] = response_handler(Body),
+		             spawn_peers(Peers, Torrent),
+	                     NewTracker = Tracker#tracker_info{interval=integer_to_list(Interval)},
+		             %SEND BACK INFO TO TORRENT
+	                     gen_server:cast(msg_controller, {notify, seeders, {Torrent#torrent.id, integer_to_list(Seeders)}}),
+	                     {noreply, {NewTracker,Torrent},Interval}
+                    end;
+		_ -> supervisor:terminate_child(dynamic_supervisor, list_to_atom(Tracker#tracker_info.url)),
+		    {stop, normal, []}		 
 	    end;
 	{error,_Reason} ->
 	    %%gen_server:cast(msg_controller,{tracker_request_error,Reason})

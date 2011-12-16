@@ -2,7 +2,7 @@
 %%Creation Date : 8-Nov-2011 
 -module(peers_interactor).
 -export([init/1,start_link/1,terminate/2,handle_cast/2,handle_call/3,handle_info/2]).
--export([test/0,handshake/1,test2/1]).
+-export([test/0,handshake/1,test2/1,test1/1]).
 -behaviour(gen_server).
 -include("defs.hrl").
 
@@ -43,7 +43,7 @@ init([Torrent, Ip, Port])->
     %%{ok,[Torrent,Socket,PID ]}.
 
 terminate(_Reason,Data)->
-    gen_server:cast(self(), stop).
+    {stop,Data}.
 
 start_link([Torrent, Ip, Port])->
     gen_server:start_link({local,list_to_atom(Ip)},?MODULE,[Torrent, Ip, Port],[]).
@@ -51,21 +51,18 @@ start_link([Torrent, Ip, Port])->
 handle_call(Request,_From,Data) ->
     {reply,null,Data}.
 
-handle_cast(stop, _Data)->
-    {stop, normal, _Data};
-
 handle_cast(Request,Data)->
     {noreply,Data}.
 
 handle_info({tcp,_,Msg},[_Torrent,_Socket,PID ]) ->
-	    io:format("message is ~p~n",[Msg]),
+	    %%io:format("message is ~p~n",[Msg]),
 	    PID ! Msg ,
     {noreply,[_Torrent,_Socket,PID ]};
 
 handle_info({tcp_closed,_Msg},_Data) ->
     io:format("CLOSED !!!!!!!! ~w~n",[_Msg]),
     gen_server:cast(logger,{peer_connection_closed}),
-    {stop,normal,_Data};
+    {noreply,_Data};
 
 handle_info(M,[Torrent,Socket,PID])->
     case M of
@@ -179,15 +176,25 @@ test2(File)->
     %%spawn(peers_interactor,handshake,[[R,IP,PORT]]).
     
 
-test1()->
-    URL = "http://torrent.fedoraproject.org:6969/announce?&info_hash=%16%71%26%41%9E%F1%84%B4%EC%8F%B3%CA%46%5A%B7%FE%D1%97%51%9A&peer_id=-AZ4004-znmphhbrij37&port=6881&downloaded=10&left=1588&event=started&numwant=12&compact=1",
+test1(File)->
+    R = interpreter:create_record(File),
+    TR = R#torrent.trackers,
+    trlist(TR,R).
+ 
+trlist([],_)->
+    ok;
+trlist([H|T],Tr) ->  
+    H2= H#tracker_info{event="started"},
+    URL = tracker_interactor:make_url(H2),
     inets:start(),
     {ok,Result} = httpc:request(URL),
-    {_Status_line, _Headers, Body} = Result,
-    Decoded_Body = parser:decode(list_to_binary(Body)),
-    [Interval,Seeds,Leechers,Peers]=interpreter:get_tracker_response_info(Decoded_Body),
-    [IP,PORT] = hd(Peers).
-
+     {Status_line, _Headers, Body} = Result,
+    case Status_line of
+	{"HTTP/1.0",200,"OK"} ->    
+	    io:format("result is : ~p~n",[Result]);
+	_-> io:format("Tracker is not Available !!!!")
+    end,
+    trlist(T,Tr).
 
 
 loop(Socket,Remain,PID)->
@@ -285,7 +292,7 @@ send_request(Dict,Socket)->
 	    Last_piece = (Torrent#torrent.number_of_pieces - 1),
 	    Piece_length = Torrent#torrent.piece_length,
 	    Last_piece_length = Torrent#torrent.file_length - ((Last_piece) * Piece_length ),
-	    Block_length = 32768,
+	    Block_length = 16384,
 	    io:format("LP is ~p~n P_len is: ~p~n lplen is : ~p~n and allfile is : ~p~n",[Last_piece,Piece_length,Last_piece_length,Torrent#torrent.file_length]),
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	    {I,B} = case get(requested_piece) of
@@ -302,8 +309,10 @@ send_request(Dict,Socket)->
 			     check_last(B,Block_length,Piece_length,I,Dict)
 		     end,
 	    io:format("Index is :~p~n",[I]),
-	    Request = <<0,0,0,13,6,I:32/integer-big,B:32/integer-big,Length:32/integer-big>>,
+	    %%Request = <<0,0,0,13,6,I:32,B:32,Length:32>>,
+	    Request = <<0,0,0,13,6,I:32,B:32,Length:32>>,
 	    io:format("Request  is : ~p~n",[Request]),
+	    %%io:format("I DONT SEND REQUEST,OK?????");
 	    gen_tcp:send(Socket,Request);
 	true ->
 	    io:format("Unchoke but Havent recieve any piece index !!!!")
@@ -317,12 +326,13 @@ check_last(Begin,Length,Size,Index,Dict)->
 	    New_dict = dict:erase(Index,Dict),
 	    io:format("send all blocks of a piece together : ~p~n",[length(get(downloaded_piece))]),
 	    T = get(torrent),
-	    gen_server:cast(intermediate,{notify,set_block,{T#torrent.id,get(downloaded_piece)} }),
+	    io:format("sending piece from peers"),
+	    gen_server:cast(msg_controller,{notify,set_blocks,{T#torrent.id,get(downloaded_piece)} }),
 	    put(downloaded_piece,[]),
 	    put(peer_have_list,New_dict);
 	Size > Begin+Length ->
-	    New_length = Begin + Length,
-	    put(requested_piece,{Index,New_length})
+	    New_length = Length,
+	    put(requested_piece,{Index,Length})
     end,
     New_length.
 

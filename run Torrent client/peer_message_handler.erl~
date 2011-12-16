@@ -11,7 +11,7 @@ msg_handler(Messages,PID) ->
 	stop ->
 	    io:format("msghandler stopped correctly !!! ~n");
 	Msg ->
-	    %io:format("msg rcv length ~w~n",[length(Msg)]),
+	    io:format("msg rcv length ~w~n",[length(Msg)]),
 	    msg_handler(Messages ++ Msg,PID)
     after 5000 ->
 	    if

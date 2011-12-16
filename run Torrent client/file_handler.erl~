@@ -23,8 +23,8 @@
         ;
        true ->
         %% structure of the directories is created and loop again.
-        directory:handle_directories(Default_Path,DataRec),
-       io:format("in file_handler, directories were created~n") 
+        directory:handle_directories(Default_Path,DataRec)
+       %% io:format("in file_handler, directories were created~n") 
 	      
              end ,
       NewPid = spawn(data_handler,handle_blocks,[DataRec,dict:new(),self(),Is_multiple]),

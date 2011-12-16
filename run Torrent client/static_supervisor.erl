@@ -23,9 +23,9 @@ init(_Args) ->
     Dynamic_Supervisor = {dynamic_supervisor, 
 			  {dynamic_supervisor, start_link, []},
 	                   transient, infinity, supervisor, [dynamic_supervisor]},
-%    Intermediate = {intermediate, {intermediate, start_link, []},
-%		   transient, 2000, worker, [intermediate, data_handler, directory, 
-%					     file_handler, record_operation, writer]},
+    Intermediate = {intermediate, {intermediate, start_intermediate, []},
+		   transient, 2000, worker, [intermediate, data_handler, directory, 
+					     file_handler, record_operation, writer, reader]},
     Msg_controller = {msg_controller, {msg_controller, start_link, [dict:new()]},
 		      transient, 2000, worker, [msg_controller, msg_logger, server_util]},
     Interpreter = {interpreter, {interpreter, start_link, []},
@@ -33,7 +33,7 @@ init(_Args) ->
     {ok,{{one_for_one,3,1}, [Msg_controller, 
 			     Gui,
 			     Dynamic_Supervisor,
-%%                           Intermediate, 
+                           Intermediate, 
 			     Database,
 			     Interpreter
 			     ]}}.
