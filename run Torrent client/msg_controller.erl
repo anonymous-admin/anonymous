@@ -1,9 +1,23 @@
+%% @author Max Mirkia <max.mirkia@gmail.com>
+%% @doc Controlls all messages in the system 
+%% <p>This module acts as the controller . It is the intended
+%% entry-point for a human  being to query etorrent for what it is
+%% doing right now. A number of commands exist, which can be asked for
+%% with the help/0 call. From there the rest of the commands can be
+%% perused.</p>
+%% @end
 -module(msg_controller).
 
 -define(SERVER, msg_controller).
 
 -compile(export_all).
 -export([start_link/0, start_link/1, init/1, handle_cast/2, terminate/2]).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
 
 start_link() ->
     start_link([]).
