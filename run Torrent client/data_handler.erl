@@ -20,7 +20,7 @@
     %  io:format("in datahandler, Block: ~p~n", [Block]),
     %  io:format("in datahandler, Tail: ~p~n", [Tail]),
           write_temp(Default_path,[[Index,Begin,Block]|Tail]),
-            Piece = get_allBlocks(Default_path,Index), % file is deleted afterwads
+            Piece = get_allBlocks(Default_path++ "/"++"temp",Index), % file is deleted afterwads
 	 %  io:format("in datahandler, assembled Piece: ~p~n", [Piece]),
 	 %  io:format("after get_all blocks: index:  ~p~n" , [Index]),
             Pieces = binary:bin_to_list(record_operation:get_pieces(DataRec)),
@@ -79,7 +79,7 @@
 
     {set_blocks,Default_path,[[Index,Begin,Block]|Tail]} -> 
       write_temp(Default_path,[[Index,Begin,Block]|Tail]),
-           Piece = get_allBlocks(Default_path,Index), % file is deleted afterwads
+           Piece = get_allBlocks(Default_path++"/"++"temp",Index), % file is deleted afterwads
          %%  io:format("after get_all blocks: index:  ~p~n" , [Index]),
            Pieces = binary:bin_to_list(record_operation:get_pieces(DataRec)),
          %% check hash value 
@@ -117,21 +117,36 @@
 
 
   write_temp(Dir,[[Ind,Begin,Block]])->
+    TempDir = Dir ++ "/" ++ "temp" ,
     Add = lists:concat([temp,Ind,'.',txt]),
-    {ok, Io} = file:open(Dir++"/"++Add,[read,write,raw]),
+    case filelib:is_dir(TempDir) of
+      true ->
+    {ok, Io} = file:open(TempDir++"/"++Add,[read,write,raw]),
     file:pwrite(Io, Begin, Block ),
-    file:close(Io);    
+    file:close(Io);
+      false ->
+    file:make_dir(TempDir),
+    {ok, Io} = file:open(TempDir++"/"++Add,[read,write,raw]),
+    file:pwrite(Io, Begin, Block ),
+    file:close(Io)
+    end ;
 
   %% writes each block of data to its pre-defined order.
   write_temp(Dir,[[Ind,Begin,Block]|Tail])->
-  %  io:format("in data_handler, tail: ~p~n",[Tail]),
-  %  io:format("in data_handler,in write_temp: index is : ~p~n begin is :~p~n block length : ~p~n",[Ind,Begin,byte_size(Block)]),
+    TempDir = Dir ++ "/" ++ "temp" ,
     Add = lists:concat([temp,Ind,'.',txt]),
-    {ok, Io} = file:open(Dir++"/"++Add,[read,write,raw]),
-    {ok, Io} = file:open(Dir++"/"++"temp.txt",[read,write,raw]),
+    case filelib:is_dir(TempDir) of
+      true ->
+    {ok, Io} = file:open(TempDir++"/"++Add,[read,write,raw]),
     file:pwrite(Io, Begin, Block ),
-    file:close(Io),
-    write_temp(Dir,Tail)
+    file:close(Io);
+      false ->
+    file:make_dir(TempDir),
+    {ok, Io} = file:open(TempDir++"/"++Add,[read,write,raw]),
+    file:pwrite(Io, Begin, Block ),
+    file:close(Io)
+    end ,
+    write_temp(Dir,Tail)    
     .
 
   %% gets a block size and a file name and checks if the content

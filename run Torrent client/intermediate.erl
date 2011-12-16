@@ -5,121 +5,118 @@
 -include("defs.hrl").
 
   start_intermediate()->
-   gen_server:start_link({local,intermediate},intermediate,dict:new(),[])
+   gen_server:start_link({local,intermediate},intermediate,{dict:new(),null,null},[])  % null1 = Path, null2 = torrent_info
   .
   
-  init(Dict)->
-  %%process_flag(trap_exit, true), 
+  init({Dict,null,null})->
+  process_flag(trap_exit, true), 
   gen_server:cast(msg_controller,{subscribe,intermediate,[{default_path,-1},{torrent_info,-1},{set_blocks,-1},{get_block,-1},{torrent_status,-1}]}),
-  {ok,Dict}
+  {ok,{Dict,null,null}}
     .
  
      % msgs from blackboard  
-     handle_cast({notify,default_path,{Torrent_id,DefPath}},TorDict)->
-                     
-                         case dict:find(Torrent_id,TorDict) of
-                           {ok, {null,null,DataRec}} ->                   
-			    Pid = file_handler:start_main(Torrent_id,DataRec,DefPath),
-                            link(Pid),
-	                    Pid ! start ,
-			    NewDic = dict:erase(Torrent_id,TorDict),
-				 io:format("had already a torrent_info"),
-				 {noreply , dict:store(Torrent_id,{Pid,DefPath,DataRec},NewDic)};
-			   error  ->
-                                 io:format("first, default_path was received"),
-                                 {noreply , dict:store(Torrent_id,{null,DefPath,null},TorDict)}
-                         end
-           ;     
-     handle_cast({notify,torrent_info,{Torrent_id,DataRec}},TorDict)->
-                         case  dict:find(Torrent_id,TorDict) of
-                            {ok,{null,DefPath,null}} ->
-                            Pid = file_handler:start_main(Torrent_id,DataRec,DefPath),
-                            link(Pid),
-	                    Pid ! start ,
-			    NewDic = dict:erase(Torrent_id,TorDict),
-			    io:format("had already a default_path"),
-		       	    {noreply , dict:store(Torrent_id,{Pid,DefPath,DataRec},NewDic)};
-                            error ->
-			    io:format("first, torrent_info was received"),
+     handle_cast({notify,default_path,{_Torrent_id,DefPath}},{TorDict,null,null})->                              
+          io:format("iiiiiiiiiiiiiiiiin intermediate: default_path was received, no torrent_info"),
+         {noreply , {TorDict,DefPath,null}}
+            ; 
+    handle_cast({notify,default_path,{_Torrent_id,DefPath}},{TorDict,null,[Tid,DataRec]})->
+            Pid = file_handler:start_main(Tid,DataRec,DefPath),
+            link(Pid),
+            Pid ! start ,
+            io:format("already had a torrent_info rec, path received, directories created"),
+            NewDict = dict:store(Tid,Pid,TorDict),
+           {noreply , {NewDict,null,DataRec}};  
+     handle_cast({notify,default_path,{_Torrent_id,DefPath}},{TorDict,DefPath,DataRec})-> % when user changes the path
+                             
+          io:format("iiiiiiiiiiiiiiiiin intermediate: user changed the path"),
+          {noreply , {TorDict,DefPath,DataRec}}
+           ; 
+     handle_cast({notify,torrent_info,{Torrent_id,DataRec}},{TorDict,null,null})->
+        {noreply , {TorDict,null,[Torrent_id,DataRec]}};
 
-                            {noreply , dict:store(Torrent_id,{null,null,DataRec},TorDict)}	 
-                         end
-           ;
-     handle_cast({notify,set_blocks,{Tid,BlockList}},TorDict)->
+     handle_cast({notify,torrent_info,{Torrent_id,DataRec}},{TorDict,Path,null})->
+    
+            Pid = file_handler:start_main(Torrent_id,DataRec,Path),
+            link(Pid),
+            Pid ! start ,
+            io:format("already had a path, info received, directories created"),
+            NewDict = dict:store(Torrent_id,Pid,TorDict),
+	   {noreply , {NewDict,Path,DataRec}};
+
+     handle_cast({notify,set_blocks,{Tid,BlockList}},{TorDict,_P,_R})->
            io:format("intermediate got set_block ~n"),
-           {ok, {Pid, _ ,_}} = dict:find(Tid,TorDict),
+           {ok, Pid} = dict:find(Tid,TorDict),
            Pid ! {set_blocks,BlockList} ,
            io:format(" set_block sent from intermediate ~n"),
-           {noreply,TorDict}
+           {noreply,{TorDict,_P,_R}}
            ;
-     handle_cast({notify,get_block,{Tid,[Peid,Index,Begin,Length]}},TorDict)->
+     handle_cast({notify,get_block,{Tid,[Peid,Index,Begin,Length]}},{TorDict,_P,_R})->
             io:format("intermediate got get_block ~n"),
             io:format("Tid: ~p~n", [Tid]),
             io:format("Peid: ~p~n", [Peid]),
             io:format("index: ~p~n", [Index]),
             io:format("Begin: ~p~n", [Begin]),
             io:format("Length: ~p~n", [Length]),
-           {ok,{Pid,_,_}} = dict:find(Tid,TorDict),  
+           {ok,Pid} = dict:find(Tid,TorDict),  
            Pid ! {get_block,[Peid,Index,Begin,Length]},
            io:format("intermediate sent get_block to pid: ~p ~n", [Pid]),
-           {noreply,TorDict}  
+           {noreply,{TorDict,_P,_R}}  
            ;
-     handle_cast({notify,torrent_status,{Tid,resumed}},TorDict)->
-           {ok, {Pid,_,_}} = dict:find(Tid,TorDict),
+     handle_cast({notify,torrent_status,{Tid,resumed}},{TorDict,_P,_R})->
+           {ok, Pid} = dict:find(Tid,TorDict),
            Pid ! resume ,
-           {noreply,TorDict}
+           {noreply,{TorDict,_P,_R}}
            ;
-     handle_cast({notify,torrent_status,{Tid,stopped}},TorDict)->
-           {ok, {Pid,_ , _ }} = dict:find(Tid,TorDict),
+     handle_cast({notify,torrent_status,{Tid,stopped}},{TorDict,_P,_R})->
+           {ok, Pid} = dict:find(Tid,TorDict),
            Pid ! stop ,
-           {noreply,dict:erase(Tid,TorDict)}
+           NewDict = dict:erase(Tid,TorDict),
+           {noreply,{NewDict,_P,_R}}
     	   ;
-     handle_cast({notify,torrent_status,{Tid,paused}}, TorDict)->
-           {ok, {Pid,_ , _ }} = dict:find(Tid,TorDict),
+     handle_cast({notify,torrent_status,{Tid,paused}}, {TorDict,_P,_R})->
+           {ok, Pid} = dict:find(Tid,TorDict),
            Pid ! pause ,
-           { noreply, TorDict}
+           { noreply, {TorDict,_P,_R}}
     	   ;
-     handle_cast({notify,torrent_status,{Tid,deleted}},TorDict)->
-           io:format("הההההההההההההההההin deleted1"),
-           {ok, {Pid,_, _}} = dict:find(Tid,TorDict),
-           io:format("הההההההההההההההההin deleted2"),
+     handle_cast({notify,torrent_status,{Tid,deleted}},{TorDict,_P,_R})->
+           {ok, Pid} = dict:find(Tid,TorDict),
            Pid ! stop,
-           io:format("הההההההההההההההההin deleted3"),
-           {noreply,dict:erase(Tid,TorDict)}    
+           NewDict = dict:erase(Tid,TorDict),
+           {noreply,{NewDict,_P,_R}}    
            ;
-      handle_cast({notify,torrent_status,{_Tid,opened}},TorDict)->
-           {noreply,TorDict}    
+      handle_cast({notify,torrent_status,{_Tid,opened}},{TorDict,_P,_R})->
+           {noreply,{TorDict,_P,_R}}    
            ;
-      handle_cast({notify,torrent_status,{_Tid,started}},TorDict)->
-           {noreply,TorDict}    
+      handle_cast({notify,torrent_status,{_Tid,started}},{TorDict,_P,_R})->
+           {noreply,{TorDict,_P,_R}}    
            ;
-     handle_cast(terminate,TorDict)->
+     handle_cast(terminate,{TorDict,_P,_R})->
            Keys = dict:fetch_keys(TorDict),
            stop_procs(Keys,TorDict),
-           {stop,normal,TorDict}
+           {stop,normal,{TorDict,_P,_R}}
            ;      
 
      % Msgs from main processes
-     handle_cast({notify,block,{Tid,[Peid,Index,Begin,Block]}},TorDict)->
+     handle_cast({notify,block,{Tid,[Peid,Index,Begin,Block]}},{TorDict,_P,_R})->
           % io:format("intermediate got block from file_handler"),
            gen_server:cast( msg_controller  ,{notify,block,{Tid,[Peid,Index,Begin,Block]}}),   %% has to be gen_server
           % io:format("block was sent to msg_controller "),
-           {noreply,TorDict}  
+           {noreply,{TorDict,_P,_R}}  
             ;
-     handle_cast({'EXIT',TerPid,normal},TorDict)->
+     handle_cast({'EXIT',TerPid,normal},{TorDict,_P,_R})->
            Keys = dict:fetch_keys(TorDict),
            NewDict = find_Tid(TerPid,Keys,TorDict),
-           {noreply,NewDict}     
+           {noreply,{NewDict,_P,_R}}     
             ;
-     handle_cast({'EXIT',_TerPid,_},TorDict)->          
-      %     Keys = dict:fetch_keys(TorDict),
-      %     NewDict = find_rec(TerPid,Keys,TorDict),
-           {noreply,TorDict} % later change to Newdict      
+     handle_cast({'EXIT',TerPid,_},{TorDict,_P,_R})->          
+           Keys = dict:fetch_keys(TorDict),
+           NewDict = find_rec(TerPid,Keys,TorDict),
+           {noreply,{NewDict,_P,_R}}       
             ;
-     handle_cast({notify,available_pieces,{Tid,IndexesList}},TorDict)->
+     handle_cast({notify,available_pieces,{Tid,IndexesList}},{TorDict,_P,_R})->
       %     io:format("intermediate got available_pieces"),
       gen_server:cast( msg_controller , {notify,available_pieces,{Tid,IndexesList}}), 
-           {noreply,TorDict} .
+           {noreply,{TorDict,_P,_R}} .
 
      terminate(_Reason, _TorDict) ->
            gen_server:cast(intermediate,terminate) .		

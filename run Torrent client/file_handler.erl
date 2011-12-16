@@ -8,7 +8,7 @@
    .
 
   main(Tid,{DataRec,Pid},PieceDict,Default_Path)-> 
- %%      process_flag(trap_exit,true),
+       process_flag(trap_exit,true),
        Is_multiple =  record_operation:is_multiple(DataRec),  % number of files is checked.
 
   receive
@@ -55,7 +55,8 @@
   %%   io:format("file_handler sent blcok to intermediate ~n"),
      main(Tid,{DataRec,Pid},PieceDict,Default_Path);   
     stop ->
-      Pid ! stop , 
+      Pid ! stop ,
+      file:del_dir(Default_Path++"/" ++"temp"), 
     stopped ;
 
     {ready_piece, Index} ->
@@ -75,9 +76,9 @@
                   main(Tid,{DataRec,Pid},NewDict,Default_Path)
                   end ;
     {'EXIT' , _FromP, normal } ->
-           ok;
+             ok;
     {'EXIT' , _FromP, _ } ->
-         NewPid = spawn(data_handler,handle_blocks,[DataRec,dict:new(),PieceDict,self(),Is_multiple]),
+         NewPid = spawn(data_handler,handle_blocks,[DataRec,dict:new(),self(),Is_multiple]),
          link(NewPid),     
          NewPid ! make_dict ,
          main(Tid,{DataRec,NewPid},PieceDict,Default_Path) 
