@@ -89,10 +89,10 @@ handle_cast({register, ProcessName}, Interests) ->
 %	  {noreply, Interests}
 %    end;
 
-handle_cast({shutdown}, Interests) ->
-      io:format("Shutting down~n"),
-      gen_server:cast(msg_controller, stop),
-      {noreply, Interests};
+handle_cast({notify,exit,exit}, Interests) ->
+    io:format("Shutting down~n"),
+    gen_server:cast(static_supervisor, stop),
+    {noreply, Interests};
 
 handle_cast({Oops}, Interests) ->
       io:format("Warning! Received: ~p~n", [Oops]),
