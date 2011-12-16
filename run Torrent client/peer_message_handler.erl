@@ -13,7 +13,7 @@ msg_handler(Messages,PID) ->
 	Msg ->
 	    %io:format("msg rcv length ~w~n",[length(Msg)]),
 	    msg_handler(Messages ++ Msg,PID)
-    after 5000 ->
+    after 1000 ->
 	    if
 		length(Messages) > 0 ->
 		    io:format("time out2 ~n"),
@@ -38,7 +38,7 @@ check_messages(Msg,Buff,PID) ->
 	    if 
 		length(Msg) > New_length ->
 		    New_buff = lists:nthtail(New_length,Msg),
-		    io:format("remain is : ~w~n",[New_buff]),
+		    %%io:format("remain is : ~w~n",[New_buff]),
 		    check_messages(New_buff,Msg,PID);
 		true ->
 		  msg_handler([],PID)
@@ -105,12 +105,7 @@ check_messages(Msg,Buff,PID) ->
 		true ->
 		    io:format("other message is : ~p~n",[Msg])
 	    end
-    end.
-
-%%check_length(Msg,Length)->
-%%    ok.
-    
-		
+    end.	
 	    
 	    
 	

@@ -3,24 +3,18 @@
 -include("defs.hrl").
 -export([create_record/1, display_table/0]).
 
-start_test_() ->
-    [?_assert(database:start_link() =:= ok)].
-
 insert_record_test_() ->
     Record1 = create_record(1),
     Record2 = create_record(2),
    [?_assert(gen_server:cast(database, {notify, torrent_info, {Record1#torrent.id, Record1}}) =:= ok),
-    ?_assert(gen_server:cast(database, {notify, torrent_info, {Record2#torrent.id, Record2}}) =:= ok),
-    ?_assert(length(ets:tab2list(database_table)) =:= 2)].
-
-delete_record_test_() ->
-    Record1 = create_record(1),
-   [?_assert(gen_server:cast(database, {notify, torrent_status, {Record1#torrent.id, deleted}}) =:= ok),
-    ?_assert(length(ets:tab2list(database_table)) =:= 1)].
+    ?_assert(gen_server:cast(database, {notify, torrent_info, {Record2#torrent.id, Record2}}) =:= ok)].
 
 update_record_test_() ->
     Record2 = create_record(2),
    [?_assert(gen_server:cast(database, {notify, piece_length, {Record2#torrent.id, 50000}}) =:= ok)].
+
+set_default_path_test_() ->
+    [?_assert(gen_server:cast(database, {notify, default_path, {-1, "c:\\"}}) =:= ok)].
     
 
 create_record(N) ->

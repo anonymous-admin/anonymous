@@ -11,12 +11,17 @@
 %%%            Notes: From operation dependent to independent
 %%%            05 Dec 2011 by Johan Wikström Schützer
 %%%            Notes: Added blackboard notification
+%%%            15 Dec 2011 by Johan Wikström Schützer
+%%%            Notes: Fixed bug about sending records to 
+%%%                   the msg_controller, didn't send 
+%%%                   records but tuple.
 %%%
 %%%-------------------------------------------------------------------
 
 -module(database).
 -export([start_link/0, start_link/1, stop/0]).
 -export([init/1, terminate/2, handle_cast/2]).
+-export([handle_call/3, handle_info/2, code_change/3]).
 -behaviour(gen_server).
 
 -include("defs.hrl").
@@ -38,7 +43,7 @@ init(_Args) ->
     case whereis(msg_controller) of
 	undefined -> false;
 	_         -> gen_server:cast(msg_controller, {subscribe, database, [{torrent_info,-1}, {torrent_status,-1}]}),
-	             notify_blackboard()
+	             spawn(fun() -> notify_blackboard() end)
     end,
     {ok, _Args}.
 
@@ -51,12 +56,11 @@ handle_cast(stop, _LoopData) ->
     {stop, normal, _LoopData};
 
 handle_cast({notify, torrent_info, {TorrentId, Record}}, _LoopData) ->
-    case server_active() of
+    case ((TorrentId /= -1) and server_active()) of
 	true ->
 	    insert(TorrentId, Record),
 	    spawn(fun() -> dump_table() end);
-	false -> %gen_server:cast(msg_controller, {notify, error,
-	    false
+	false -> false
     end,
     {noreply, _LoopData};
 
@@ -123,7 +127,9 @@ update(TorrentId, Tag, Value) ->
 %% Deletes an entry from the table
 
 delete(TorrentId) ->
-    ets:delete(database_table, TorrentId).
+    timer:sleep(2000),
+    ets:delete(database_table, TorrentId),
+    spawn(fun() -> dump_table() end).
 
 %% Checks if the server is active or not. 
 %% Returns true or false.
@@ -149,5 +155,16 @@ notify_blackboard() ->
 
 notify_blackboard([]) -> ok;
 notify_blackboard([H|T]) ->
-    gen_server:cast(msg_controller, {notify, torrent_info, {H#torrent.id, H}}),
+    {Id, Record} = H,
+    dynamic_supervisor:start_torrent(Record),
+    gen_server:cast(msg_controller, {notify, torrent_info, {Id, Record}}),
     notify_blackboard(T).
+
+handle_info(_,_) ->
+    ok.
+
+handle_call(_,_,_) ->
+    ok.
+
+code_change(_,_,_) ->
+    ok.

@@ -42,7 +42,7 @@ init(_Args) ->
     dets:to_ets(?DATAFILE, ets:new(database_table, [set, named_table])),
     case whereis(msg_controller) of
 	undefined -> false;
-	_         -> gen_server:cast(msg_controller, {subscribe, database, [{torrent_info,-1}, {torrent_status,-1}]}),
+	_         -> gen_server:cast(msg_controller, {subscribe, database, [{torrent_info,-1}, {torrent_status,-1}, {default_path,-1}]}),
 	             spawn(fun() -> notify_blackboard() end)
     end,
     {ok, _Args}.
@@ -66,6 +66,10 @@ handle_cast({notify, torrent_info, {TorrentId, Record}}, _LoopData) ->
 
 handle_cast({notify, torrent_status, {TorrentId, deleted}}, _LoopData) ->
     delete(TorrentId),    
+    {noreply, _LoopData};
+
+handle_cast({notify, default_path, {_TorrentId, Value}}, _LoopData) ->
+    put_default_path(Value),    
     {noreply, _LoopData};
 
 handle_cast({notify, Tag, {TorrentId, Value}}, _LoopData) ->
@@ -131,6 +135,12 @@ delete(TorrentId) ->
     ets:delete(database_table, TorrentId),
     spawn(fun() -> dump_table() end).
 
+%% Puts the default path in the database
+
+put_default_path(Path) ->
+    ets:insert(database_table, {default_path, Path}),
+    spawn(fun() -> dump_table() end).
+
 %% Checks if the server is active or not. 
 %% Returns true or false.
 
@@ -155,9 +165,14 @@ notify_blackboard() ->
 
 notify_blackboard([]) -> ok;
 notify_blackboard([H|T]) ->
-    {Id, Record} = H,
-    dynamic_supervisor:start_torrent(Record),
-    gen_server:cast(msg_controller, {notify, torrent_info, {Id, Record}}),
+    {Id, Value} = H,
+    case Id of
+	default_path ->
+	    gen_server:cast(msg_controller, {notify, default_path, {-1, Value}});
+	_            ->
+	    dynamic_supervisor:start_torrent(Value),
+	    gen_server:cast(msg_controller, {notify, torrent_info, {Id, Value}})
+    end,
     notify_blackboard(T).
 
 handle_info(_,_) ->

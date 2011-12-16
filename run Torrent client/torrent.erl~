@@ -12,7 +12,7 @@ init([Id, Torrent_info]) ->
 						     {left, Id}]}),
     Dict = dict:new(),
     Dynamics = {Torrent_info#torrent.downloaded, Torrent_info#torrent.left, "started", Torrent_info#torrent.max_peers},
-    spawn(fun() -> spawn_trackers(Torrent_info#torrent.trackers, Dict, 0, Torrent_info) end),
+    %spawn(fun() -> spawn_trackers(Torrent_info#torrent.trackers, Dict, 0, Torrent_info) end),
     {ok, {Id, Dict, 0, Dynamics}}.
 
 terminate(_Reason, {Id, _Dict, _Entries, _Dynamics}) ->
@@ -39,7 +39,7 @@ handle_cast({notify, Tag, {Id, Value}}, {Id, Dict, Entries, {Downloaded, Left, E
 		resumed   -> Dynamics = {Downloaded, Left, "", Max_peers};
 		deleted   -> 
 		    Dynamics = {Downloaded, Left, "", Max_peers},
-		    spawn(fun() -> kill_trackers(Dict) end),
+		    %spawn(fun() -> kill_trackers(Dict) end),
 		    supervisor:terminate_child(dynamic_supervisor, Id),
 		    terminate([], {Id, [], [], []})
 	    end
