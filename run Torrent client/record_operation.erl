@@ -45,15 +45,15 @@
  
   %% returns files dictionary , key: numbers , value: record of each file information
    files_dict(ParentDir,[[DirBins,Size]],Dict,1)->  % Base case 
-    io:format("in the filesDict~n"),
+  %  io:format("in the filesDict~n"),
     [BinFileName|_] = lists:reverse(DirBins),
     FileName = binary:bin_to_list(BinFileName),
-     io:format("FileName: ~p~n", [FileName]), 
+  %   io:format("FileName: ~p~n", [FileName]), 
     DirList = DirBins -- [BinFileName],
     Path = directory:make_path(DirList,[]),
-    io:format("Path: ~p~n" ,[Path]), 
+  %  io:format("Path: ~p~n" ,[Path]), 
     Passed_bytes = 0,
-    io:format("Passedbytes: ~p~n",[Passed_bytes]),
+  %  io:format("Passedbytes: ~p~n",[Passed_bytes]),
     case Path of 
      [] ->
         Rec2 = #files_data{filename = FileName, path =  ParentDir  , size = Size , passed_bytes = Passed_bytes},
@@ -65,17 +65,17 @@
 	    
         end  ;
    files_dict(ParentDir,[[DirBins,Size]],Dict,N)->  % Base case 
-    io:format("in the filesDict~n"),
+  %  io:format("in the filesDict~n"),
     [BinFileName|_] = lists:reverse(DirBins),
     FileName = binary:bin_to_list(BinFileName),
-     io:format("FileName: ~p~n", [FileName]), 
+  %   io:format("FileName: ~p~n", [FileName]), 
     DirList = DirBins -- [BinFileName],
     Path = directory:make_path(DirList,[]),
-    io:format("Path: ~p~n" ,[Path]),
+ %   io:format("Path: ~p~n" ,[Path]),
     {ok,Rec1} = dict:find(N-1,Dict), 
     io:format("Rec1: ~p~n",[Rec1]),
     Passed_bytes = (Rec1#files_data.passed_bytes)+ (Rec1#files_data.size),
-    io:format("Passedbytes: ~p~n",[Passed_bytes]),
+  %  io:format("Passedbytes: ~p~n",[Passed_bytes]),
     case Path of 
      [] ->
         Rec2 = #files_data{filename = FileName, path =  ParentDir  , size = Size , passed_bytes = Passed_bytes},
@@ -88,12 +88,12 @@
         end  ; 
    
    files_dict(ParentDir,[[DirBins,Size]|Tail], Dict, 1)->
-    io:format("in the filesDict"),
+  %  io:format("in the filesDict"),
     [BinFileName|_] = lists:reverse(DirBins),
     FileName = binary:bin_to_list(BinFileName),
     DirList = DirBins -- [BinFileName],
     Path = directory:make_path(DirList,[]), 
-     io:format("FileName: ~p~n, DirList: ~p~n, Path: ~p~n", [FileName,DirList,Path]), 
+ %    io:format("FileName: ~p~n, DirList: ~p~n, Path: ~p~n", [FileName,DirList,Path]), 
     Passed_bytes = 0 ,
     case Path of
     [] ->
@@ -107,16 +107,16 @@
      end
     ;
    files_dict(ParentDir,[[DirBins,Size]|Tail], Dict, N)->
-    io:format("in the files_dict"),
+  %  io:format("in the files_dict"),
     [BinFileName|_] = lists:reverse(DirBins),
-    io:format("after reverse"),
+  %  io:format("after reverse"),
     FileName = binary:bin_to_list(BinFileName),
     DirList = DirBins -- [FileName],
-    io:format("before make path"),
+  %  io:format("before make path"),
     Path = directory:make_path(DirList,[]),
-    io:format("after make path"),
+  %  io:format("after make path"),
     {ok,Rec1} = dict:find(N-1,Dict),
-    io:format("FileName: ~p~n, DirList: ~p~n, Path: ~p~n, Rec1: ~p~n", [FileName,DirList,Path,Rec1]), 
+  %  io:format("FileName: ~p~n, DirList: ~p~n, Path: ~p~n, Rec1: ~p~n", [FileName,DirList,Path,Rec1]), 
     Passed_bytes = (Rec1#files_data.passed_bytes)+ (Rec1#files_data.size),
     case Path of 
 	[] ->

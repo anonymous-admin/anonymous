@@ -18,20 +18,17 @@
       %% The single or multiple mode is handled and loop again.
       case Is_multiple of
  
-       false ->
-         ok 
-        ;
+       false ->    
+       ok ;
        true ->
-        %% structure of the directories is created and loop again.
-        directory:handle_directories(Default_Path,DataRec),
-       io:format("in file_handler, directories were created~n") 
-	      
-             end ,
+    %% structure of the directories is created and loop again.
+      directory:handle_directories(Default_Path,DataRec)
+    % io:format("in file_handler, directories were created~n") 
+       end ,
       NewPid = spawn(data_handler,handle_blocks,[DataRec,dict:new(),self(),Is_multiple]),
       link(NewPid),     
       NewPid ! make_dict ,
-      main(Tid,{DataRec,NewPid},PieceDict,Default_Path);
-       
+      main(Tid,{DataRec,NewPid},PieceDict,Default_Path);                 
 
     pause -> 
       main(Tid,{DataRec,Pid},PieceDict,Default_Path);  
