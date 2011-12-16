@@ -1,10 +1,19 @@
 %% Author: Johan and Massih
 
 -module(torrent).
+% Gen server behaviour
 -export([init/1,start_link/1,handle_call/3,handle_cast/2,terminate/2]).
+% Unused gen_server functions.
 -export([handle_info/2, code_change/3]).
 -behaviour(gen_server).
 -include("defs.hrl").
+
+% Sets the dynamics and spawns the trackers for this torrent.
+% Dynamics: Values for downloaded, left, message tag for the tracker and max peers.
+%           These are continously retreived by the tracker processes, to be sent to the 
+%           trackers. They should change over the course of runtime, so its implemented
+%           here as part of the loopdata. The rest of the loopdata is the id of this
+%           torrent, a dict containing referenses to each tracker and the number of trackers.
 
 init([Id, Torrent_info]) ->
     gen_server:cast(msg_controller, {subscribe, Id, [{torrent_status, Id}, 
@@ -24,8 +33,15 @@ start_link([Id, Torrent_info]) ->
 handle_cast(stop, _Data) ->
     {stop, normal, _Data};
 
+% Updates the tracker dict and the number of entries in it.
+
 handle_cast({trackerinfo, {NewDict, NewEntries}}, {Id, _Dict, _Entries, Dynamics}) ->
     {noreply, {Id, NewDict, NewEntries, Dynamics}}; 
+
+% Updates the dynamic values in the loopdata. If it gets torrent_status deleted, it will
+% kill this process. In the other parts of the applications messagesending, the status
+% of the related torrent is checked. If it is killed, all its related tracker and 
+% peers processes should terminate.
 
 handle_cast({notify, Tag, {Id, Value}}, {Id, Dict, Entries, {Downloaded, Left, Event, Max_peers}}) ->
     case Tag of 
@@ -46,22 +62,22 @@ handle_cast({notify, Tag, {Id, Value}}, {Id, Dict, Entries, {Downloaded, Left, E
     end,
     {noreply, {Id, Dict, Entries, Dynamics}};
 
+% Used internally, updates the tracker event.
+
 handle_cast({set_dynamics_event, NewEvent}, {Id, Dict, Entries, {Downloaded, Left, _Event, Max_peers}}) ->
     {noreply, {Id, Dict, Entries, {Downloaded, Left, NewEvent, Max_peers}}}.
+
+% Called by the traacker processes, returns the dynamic data.
 
 handle_call(get_dynamics, _From, {Id, Dict, Entries, Dynamics}) ->
     {reply, Dynamics, {Id, Dict, Entries, Dynamics}}.
 
-%% Starts each tracker trough the dynamic supervisor, sends started to them.
-%% Gets the interval for said tracker, and updates the record with new interval,
-%% sends the information to the blackboard, spawns the interval loop for said tracker
-%% with the empty flag. Store the information in the dict.
-%% Loop until all trackers are spawned.
-%% 
-%% H = tracker record
-%% Dict = new dict which get filled with....
-%% Entries = number of entries
-%% Id = torrent id
+%% Starts each tracker trough the dynamic supervisor.
+%% Sets its own dynamic with the event "", which is the default event
+%% to send to the tracker. In the tracker process we make sure that
+%% the first info sent to the tracker is with the event "started".
+%% Updates the dict of trackers and proceeds recursively on the
+%% given list of tracker records.
 
 spawn_trackers([], Dict, Entries, Torrent_info) ->
     gen_server:cast(Torrent_info#torrent.id, {trackerinfo, {Dict, Entries}});
@@ -72,6 +88,11 @@ spawn_trackers([H|T], Dict, Entries, Torrent_info) ->
     NewDict = dict:store(Entries+1, {Pid, H}, Dict),
     spawn_trackers(T, NewDict, Entries+1, Torrent_info).
 
+%% Old function for killing trackers. Not used anymore.
+%% This function would kill the trackers, but instead
+%% the trackers check for their torrents status, and if it
+%% is dead, they terminate.
+
 kill_trackers(Dict) ->
     kill_trackers(dict:fetch_keys(Dict), Dict).
 kill_trackers([], _Dict) ->
@@ -81,6 +102,8 @@ kill_trackers([H|T], Dict) ->
     supervisor:terminate_child(dynamic_supervisor, Id),
     supervisor:delete_child(dynamic_supervisor, Id),
     kill_trackers(T, Dict).
+
+% Unused gen_server functions.
 
 handle_info(_, _) ->
     ok.

@@ -4,6 +4,8 @@
 -behaviour(supervisor).
 -export([start_link/0, start_in_shell/0, init/1]).
 
+% This process starts the whole application. All the static processes are given below.
+
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
@@ -15,7 +17,9 @@ start_in_shell() ->
 %% Last row is the kickoff, make sure they start in the correct order.
 
 init(_Args) ->
-    
+
+    %% The static processes, all started upon startup of the application.
+
     Database = {database, {database, start_link, []},
 	     transient, 2000, worker, [database]},
     Gui = {gui, {talkToJava, start_link, []},

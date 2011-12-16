@@ -12,7 +12,7 @@ init([Id, Torrent_info]) ->
 						     {left, Id}]}),
     Dict = dict:new(),
     Dynamics = {Torrent_info#torrent.downloaded, Torrent_info#torrent.left, "started", Torrent_info#torrent.max_peers},
-    %spawn(fun() -> spawn_trackers(Torrent_info#torrent.trackers, Dict, 0, Torrent_info) end),
+    spawn(fun() -> spawn_trackers(Torrent_info#torrent.trackers, Dict, 0, Torrent_info) end),
     {ok, {Id, Dict, 0, Dynamics}}.
 
 terminate(_Reason, {Id, _Dict, _Entries, _Dynamics}) ->

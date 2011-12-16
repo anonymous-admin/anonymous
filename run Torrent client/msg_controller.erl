@@ -91,7 +91,8 @@ handle_cast({register, ProcessName}, Interests) ->
 
 handle_cast({notify,exit,exit}, Interests) ->
     io:format("Shutting down~n"),
-    gen_server:cast(static_supervisor, stop),
+    SvPid = whereis(static_supervisor),
+    exit(SvPid, kill),
     {noreply, Interests};
 
 handle_cast({Oops}, Interests) ->

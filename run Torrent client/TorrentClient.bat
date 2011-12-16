@@ -1,2 +1,2 @@
-start JavaNode.cmd
-start ErlangNode.cmd
+start /B JavaNode.cmd
+start /B ErlangNode.cmd

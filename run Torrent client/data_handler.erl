@@ -168,15 +168,10 @@
   %% retrieves the data stored in the temp.txt file and deletes the file.
   get_allBlocks(Dir,Index)-> 
     Add = lists:concat([Dir,'/',temp,Index,'.',txt]),
-    case filelib:is_file(Add) of
-	false ->
-	    ok;
-	true ->
-	    {ok,Bin} = file:read_file(Add),
-	    file:delete(Add),
-	%   io:format("in get_allblocks, after temp is deleted"),
-            Bin
-    end
+    {ok,Bin} = file:read_file(Add),
+    file:delete(Add),
+%   io:format("in get_allblocks, after temp is deleted"),
+    Bin
   .
   
   %% checks the SHA1 hash value of the returned data 
