@@ -13,7 +13,7 @@ msg_handler(Messages,PID) ->
 	Msg ->
 	    %io:format("msg rcv length ~w~n",[length(Msg)]),
 	    msg_handler(Messages ++ Msg,PID)
-    after 1000 ->
+    after 2000 ->
 	    if
 		length(Messages) > 0 ->
 		    io:format("time out2 ~n"),
